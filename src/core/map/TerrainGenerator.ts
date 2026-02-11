@@ -1,12 +1,10 @@
 import { createNoise2D } from 'simplex-noise';
 import { HexGrid } from './HexGrid';
 import { mulberry32 } from './rng';
-import type { HexCell, HexCoord, MapConfig } from './types';
+import type { HexCell, HexCoord, SeaSides, TerrainParams } from './types';
 import { TerrainType } from './types';
 
-type Geography = MapConfig['geography'];
-
-const GEOGRAPHY_OFFSETS: Record<Geography, number> = {
+const GEOGRAPHY_OFFSETS: Record<TerrainParams['geography'], number> = {
   plains: 0.1,
   mixed: 0,
   mountainous: -0.1,
@@ -16,7 +14,8 @@ export class TerrainGenerator {
   static generate(
     width: number,
     height: number,
-    geography: Geography,
+    params: TerrainParams,
+    seaSides: SeaSides,
     seed: number,
   ): Map<string, HexCell> {
     const rng = mulberry32(seed);
@@ -30,9 +29,16 @@ export class TerrainGenerator {
         const q = col;
         const r = row - Math.floor(col / 2);
         const coord: HexCoord = { q, r };
-        const elevation = TerrainGenerator.sampleElevation(coord, width, height, elevationNoise);
-        const moisture = TerrainGenerator.sampleMoisture(coord, moistureNoise);
-        const terrain = TerrainGenerator.assignTerrain(elevation, moisture, geography);
+        const elevation = TerrainGenerator.sampleElevation(
+          coord,
+          width,
+          height,
+          params,
+          seaSides,
+          elevationNoise,
+        );
+        const moisture = TerrainGenerator.sampleMoisture(coord, params, moistureNoise);
+        const terrain = TerrainGenerator.assignTerrain(elevation, moisture, params);
 
         cells.set(HexGrid.key(coord), {
           coord,
@@ -51,47 +57,57 @@ export class TerrainGenerator {
     coord: HexCoord,
     width: number,
     height: number,
+    params: TerrainParams,
+    seaSides: SeaSides,
     noise: (x: number, y: number) => number,
   ): number {
-    const scale1 = 0.05;
-    const scale2 = 0.1;
-    const scale3 = 0.2;
+    const scale1 = params.elevationScaleLarge;
+    const scale2 = params.elevationScaleMedium;
+    const scale3 = params.elevationScaleDetail;
 
     let value =
-      (0.6 * (noise(coord.q * scale1, coord.r * scale1) + 1)) / 2 +
-      (0.3 * (noise(coord.q * scale2, coord.r * scale2) + 1)) / 2 +
-      (0.1 * (noise(coord.q * scale3, coord.r * scale3) + 1)) / 2;
+      (params.noiseWeightLarge * (noise(coord.q * scale1, coord.r * scale1) + 1)) / 2 +
+      (params.noiseWeightMedium * (noise(coord.q * scale2, coord.r * scale2) + 1)) / 2 +
+      (params.noiseWeightDetail * (noise(coord.q * scale3, coord.r * scale3) + 1)) / 2;
 
-    // Use offset row for center falloff so it's symmetric on the rectangular map
+    // Use offset row for falloff so it's symmetric on the rectangular map
     const row = coord.r + Math.floor(coord.q / 2);
-    const cx = coord.q / width - 0.5;
-    const cy = row / height - 0.5;
-    const distFromCenter = Math.sqrt(cx * cx + cy * cy) * 2;
-    const falloff = Math.max(0, 1 - distFromCenter * distFromCenter);
+    const nx = coord.q / width;
+    const ny = row / height;
+    let falloff = 1.0;
+    const strength = params.falloffStrength;
+    if (seaSides.west) falloff *= Math.min(1, (nx / 0.3) ** strength);
+    if (seaSides.east) falloff *= Math.min(1, ((1 - nx) / 0.3) ** strength);
+    if (seaSides.north) falloff *= Math.min(1, (ny / 0.3) ** strength);
+    if (seaSides.south) falloff *= Math.min(1, ((1 - ny) / 0.3) ** strength);
     value *= falloff;
 
     return Math.max(0, Math.min(1, value));
   }
 
-  private static sampleMoisture(coord: HexCoord, noise: (x: number, y: number) => number): number {
-    const scale = 0.08;
+  private static sampleMoisture(
+    coord: HexCoord,
+    params: TerrainParams,
+    noise: (x: number, y: number) => number,
+  ): number {
+    const scale = params.moistureScale;
     const value = (noise(coord.q * scale + 100, coord.r * scale + 100) + 1) / 2;
     return Math.max(0, Math.min(1, value));
   }
 
-  static assignTerrain(elevation: number, moisture: number, geography: Geography): TerrainType {
-    const offset = GEOGRAPHY_OFFSETS[geography];
+  static assignTerrain(elevation: number, moisture: number, params: TerrainParams): TerrainType {
+    const offset = GEOGRAPHY_OFFSETS[params.geography];
     const moistureThreshold = 0.5;
 
-    if (elevation < 0.2 + offset) return TerrainType.Water;
-    if (elevation < 0.35 + offset) {
-      if (moisture > 0.7) return TerrainType.Water; // noise-based inland lake
+    if (elevation < params.waterThreshold + offset) return TerrainType.Water;
+    if (elevation < params.coastalThreshold + offset) {
+      if (moisture > params.lakeMoistureThreshold) return TerrainType.Water; // noise-based inland lake
       return moisture > moistureThreshold ? TerrainType.Marsh : TerrainType.Plains;
     }
-    if (elevation < 0.55 + offset) {
+    if (elevation < params.lowlandThreshold + offset) {
       return moisture > moistureThreshold ? TerrainType.Forest : TerrainType.Plains;
     }
-    if (elevation < 0.75 + offset) {
+    if (elevation < params.highlandThreshold + offset) {
       return moisture > moistureThreshold ? TerrainType.Forest : TerrainType.Hills;
     }
     return TerrainType.Mountain;
