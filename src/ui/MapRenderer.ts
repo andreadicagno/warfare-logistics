@@ -1,17 +1,31 @@
 import { HexGrid } from '@core/map/HexGrid';
 import type { GameMap, HexCoord } from '@core/map/types';
-import type { MockFacility } from '@core/mock/types';
+import { MockSimulation } from '@core/mock/MockSimulation';
+import type { RouteHealth } from '@core/mock/types';
 import { Profiler } from '@core/Profiler';
 import { type Application, Container } from 'pixi.js';
 import { Camera } from './Camera';
 import { HexRenderer } from './HexRenderer';
-import { RouteAnimator } from './layers/RouteAnimator';
+import { FlowLayer } from './layers/FlowLayer';
+import { FrontLineLayer } from './layers/FrontLineLayer';
 import { RouteLayer } from './layers/RouteLayer';
 import { SelectionLayer } from './layers/SelectionLayer';
 import { SupplyHubLayer } from './layers/SupplyHubLayer';
 import { TerrainLayer } from './layers/TerrainLayer';
+import { TerritoryLayer } from './layers/TerritoryLayer';
+import { UnitLayer } from './layers/UnitLayer';
+import { VehicleLayer } from './layers/VehicleLayer';
 
-export type LayerName = 'terrain' | 'routes' | 'supplyHubs' | 'selection';
+export type LayerName =
+  | 'terrain'
+  | 'territory'
+  | 'routes'
+  | 'flows'
+  | 'vehicles'
+  | 'supplyHubs'
+  | 'frontLine'
+  | 'units'
+  | 'selection';
 
 export class MapRenderer {
   private app: Application;
@@ -19,14 +33,19 @@ export class MapRenderer {
   private worldContainer: Container;
   private camera: Camera;
   private terrainLayer: TerrainLayer;
+  private territoryLayer: TerritoryLayer;
   private routeLayer: RouteLayer;
-  private routeAnimator!: RouteAnimator;
+  private flowLayer: FlowLayer;
+  private vehicleLayer: VehicleLayer;
   private supplyHubLayer: SupplyHubLayer;
+  private frontLineLayer: FrontLineLayer;
+  private unitLayer: UnitLayer;
   private selectionLayer: SelectionLayer;
   private boundOnFrame: () => void;
   private disabledLayers = new Set<LayerName>();
-  private supplyHubVersion = 1;
-  private routeVersion = 0;
+  private mockSim: MockSimulation;
+  private lastMockVersion = -1;
+  private isPaused = false;
 
   constructor(app: Application, gameMap: GameMap) {
     const prof = new Profiler('MapRenderer');
@@ -39,30 +58,57 @@ export class MapRenderer {
 
     this.camera = new Camera(this.worldContainer, this.app);
 
-    // Create placeholder facilities from supply hubs until MockSimulation is wired
-    const placeholderFacilities: MockFacility[] = gameMap.supplyHubs.map((hub, i) => ({
-      id: `facility-${i + 1}`,
-      kind: 'depot' as const,
-      coord: hub.coord,
-      size: hub.size,
-      storage: { fuel: 0.8, ammo: 0.6, food: 0.9, parts: 0.5 },
-      damaged: false,
-    }));
+    // Create MockSimulation
+    this.mockSim = new MockSimulation(gameMap);
 
+    // Build route health maps from mock state
+    const roadHealths = new Map<number, RouteHealth>();
+    const railwayHealths = new Map<number, RouteHealth>();
+    for (let i = 0; i < this.mockSim.state.routeStates.length; i++) {
+      const rs = this.mockSim.state.routeStates[i];
+      if (rs.route.type === 'road') {
+        const idx = gameMap.roads.indexOf(rs.route);
+        if (idx >= 0) roadHealths.set(idx, rs.health);
+      } else {
+        const idx = gameMap.railways.indexOf(rs.route);
+        if (idx >= 0) railwayHealths.set(idx, rs.health);
+      }
+    }
+
+    // Create layers
     this.terrainLayer = new TerrainLayer(gameMap);
-    this.routeLayer = new RouteLayer(gameMap);
-    this.supplyHubLayer = new SupplyHubLayer(placeholderFacilities);
+    this.territoryLayer = new TerritoryLayer(gameMap, this.mockSim.state.territory);
+    this.routeLayer = new RouteLayer(gameMap, roadHealths, railwayHealths);
+    this.flowLayer = new FlowLayer(() => this.camera.scale);
+    this.vehicleLayer = new VehicleLayer(() => this.camera.scale);
+    this.supplyHubLayer = new SupplyHubLayer(this.mockSim.state.facilities);
+    this.frontLineLayer = new FrontLineLayer();
+    this.unitLayer = new UnitLayer();
     this.selectionLayer = new SelectionLayer();
 
+    // Add to scene graph in correct rendering order
     this.worldContainer.addChild(this.terrainLayer.container);
+    this.worldContainer.addChild(this.territoryLayer.container);
     this.worldContainer.addChild(this.routeLayer.container);
+    this.worldContainer.addChild(this.flowLayer.container);
+    this.worldContainer.addChild(this.vehicleLayer.container);
     this.worldContainer.addChild(this.supplyHubLayer.container);
+    this.worldContainer.addChild(this.frontLineLayer.container);
+    this.worldContainer.addChild(this.unitLayer.container);
     this.worldContainer.addChild(this.selectionLayer.container);
 
     const bounds = this.camera.getVisibleBounds();
     prof.measure('TerrainLayer.build()', () => this.terrainLayer.build(bounds));
     prof.measure('RouteLayer.build()', () => this.routeLayer.build(0));
-    prof.measure('SupplyHubLayer.build()', () => this.supplyHubLayer.build(1));
+
+    // Initialize data and build versioned layers
+    this.territoryLayer.build(this.mockSim.state.version);
+    this.frontLineLayer.updateData(this.mockSim.state.frontLineEdges);
+    this.frontLineLayer.build(this.mockSim.state.version);
+    this.unitLayer.updateData(this.mockSim.state.units);
+    this.unitLayer.build(this.mockSim.state.version);
+    this.supplyHubLayer.build(this.mockSim.state.version);
+    this.lastMockVersion = this.mockSim.state.version;
 
     const centerCol = Math.floor(gameMap.width / 2);
     const centerRow = Math.floor(gameMap.height / 2);
@@ -77,16 +123,23 @@ export class MapRenderer {
     const newBounds = this.camera.getVisibleBounds();
     this.terrainLayer.build(newBounds);
     this.routeLayer.build(0);
-    this.supplyHubLayer.build(1);
+    this.supplyHubLayer.build(this.lastMockVersion);
 
-    prof.measure('RouteAnimator.init()', () => {
-      this.routeAnimator = new RouteAnimator(() => this.camera.scale);
-      this.worldContainer.addChild(this.routeAnimator.container);
-      this.routeAnimator.init(
+    // Initialize FlowLayer (replaces RouteAnimator)
+    prof.measure('FlowLayer.init()', () => {
+      this.flowLayer.init(
         this.routeLayer.computedRoadSplines,
         this.routeLayer.computedRailwaySplines,
+        roadHealths,
+        railwayHealths,
       );
     });
+
+    // Initialize VehicleLayer
+    this.vehicleLayer.init(
+      this.routeLayer.computedRoadSplines,
+      this.routeLayer.computedRailwaySplines,
+    );
 
     this.camera.attach();
 
@@ -143,42 +196,60 @@ export class MapRenderer {
     container.visible = visible;
     if (visible) {
       this.disabledLayers.delete(layer);
-      // Rebuild immediately so it's up to date
-      const bounds = this.camera.getVisibleBounds();
-      this.buildLayer(layer, bounds);
+      this.buildLayer(layer);
     } else {
       this.disabledLayers.add(layer);
     }
+  }
+
+  setPaused(paused: boolean): void {
+    this.isPaused = paused;
   }
 
   private layerContainer(layer: LayerName): Container | null {
     switch (layer) {
       case 'terrain':
         return this.terrainLayer.container;
+      case 'territory':
+        return this.territoryLayer.container;
       case 'routes':
         return this.routeLayer.container;
+      case 'flows':
+        return this.flowLayer.container;
+      case 'vehicles':
+        return this.vehicleLayer.container;
       case 'supplyHubs':
         return this.supplyHubLayer.container;
+      case 'frontLine':
+        return this.frontLineLayer.container;
+      case 'units':
+        return this.unitLayer.container;
       case 'selection':
         return this.selectionLayer.container;
     }
   }
 
-  private buildLayer(
-    layer: LayerName,
-    bounds: { minX: number; minY: number; maxX: number; maxY: number },
-  ): void {
+  private buildLayer(layer: LayerName): void {
     switch (layer) {
       case 'terrain':
-        this.terrainLayer.build(bounds);
+        this.terrainLayer.build(this.camera.getVisibleBounds());
+        break;
+      case 'territory':
+        this.territoryLayer.build(this.lastMockVersion);
         break;
       case 'routes':
-        this.routeLayer.build(this.routeVersion);
+        this.routeLayer.build(this.lastMockVersion);
         break;
       case 'supplyHubs':
-        this.supplyHubLayer.build(this.supplyHubVersion);
+        this.supplyHubLayer.build(this.lastMockVersion);
         break;
-      // selection doesn't have build()
+      case 'frontLine':
+        this.frontLineLayer.build(this.lastMockVersion);
+        break;
+      case 'units':
+        this.unitLayer.build(this.lastMockVersion);
+        break;
+      // flows, vehicles, selection don't have build()
     }
   }
 
@@ -186,10 +257,14 @@ export class MapRenderer {
     this.app.ticker.remove(this.boundOnFrame);
     this.app.stage.off('pointermove', this.onPointerMove);
     this.camera.detach();
-    this.routeAnimator.destroy();
     this.terrainLayer.destroy();
+    this.territoryLayer.destroy();
     this.routeLayer.destroy();
+    this.flowLayer.destroy();
+    this.vehicleLayer.destroy();
     this.supplyHubLayer.destroy();
+    this.frontLineLayer.destroy();
+    this.unitLayer.destroy();
     this.selectionLayer.destroy();
     this.app.stage.removeChild(this.worldContainer);
     this.worldContainer.destroy();
@@ -201,10 +276,29 @@ export class MapRenderer {
   };
 
   private onFrame(): void {
-    this.routeAnimator.update(this.app.ticker);
-    if (!this.camera.isDirty) return;
-    this.camera.clearDirty();
-    // All layers build once and cache their geometry.
-    // PixiJS handles viewport clipping on the GPU.
+    const dt = this.app.ticker.deltaMS / 1000;
+
+    // Update mock simulation
+    if (!this.isPaused) {
+      this.mockSim.update(dt);
+    }
+
+    // Rebuild static layers if mock state version changed
+    if (this.mockSim.state.version !== this.lastMockVersion) {
+      this.lastMockVersion = this.mockSim.state.version;
+      this.territoryLayer.updateData(this.mockSim.state.territory);
+      this.territoryLayer.build(this.lastMockVersion);
+      this.frontLineLayer.updateData(this.mockSim.state.frontLineEdges);
+      this.frontLineLayer.build(this.lastMockVersion);
+      this.unitLayer.updateData(this.mockSim.state.units);
+      this.unitLayer.build(this.lastMockVersion);
+      this.supplyHubLayer.updateData(this.mockSim.state.facilities);
+      this.supplyHubLayer.build(this.lastMockVersion);
+    }
+
+    // Per-frame animated layers
+    this.flowLayer.update(this.app.ticker);
+    this.vehicleLayer.update(this.app.ticker, this.mockSim.state.vehicles);
+    this.unitLayer.update(dt);
   }
 }

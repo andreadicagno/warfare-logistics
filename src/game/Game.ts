@@ -98,6 +98,7 @@ export class Game {
 
   private togglePause(): void {
     this.isPaused = !this.isPaused;
+    this.mapRenderer?.setPaused(this.isPaused);
     console.log(this.isPaused ? 'Game paused' : 'Game resumed');
   }
 

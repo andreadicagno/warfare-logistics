@@ -373,8 +373,13 @@ export class Sidebar {
 
     const layers: { key: LayerName; label: string }[] = [
       { key: 'terrain', label: 'Terrain' },
+      { key: 'territory', label: 'Territory' },
       { key: 'routes', label: 'Routes' },
+      { key: 'flows', label: 'Flows' },
+      { key: 'vehicles', label: 'Vehicles' },
       { key: 'supplyHubs', label: 'Supply Hubs' },
+      { key: 'frontLine', label: 'Front Line' },
+      { key: 'units', label: 'Units' },
       { key: 'selection', label: 'Selection' },
     ];
 
