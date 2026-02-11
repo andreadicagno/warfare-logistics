@@ -1,6 +1,6 @@
-import type { HexCell, HexCoord } from './types';
-import { TerrainType, SettlementType } from './types';
 import { HexGrid } from './HexGrid';
+import type { HexCell, HexCoord } from './types';
+import { SettlementType, TerrainType } from './types';
 
 const CITY_DENSITY = 3 / 1200;
 const TOWN_DENSITY = 8 / 1200;
@@ -9,11 +9,7 @@ const MIN_CITY_DISTANCE = 8;
 const MIN_TOWN_DISTANCE = 3;
 
 export class SettlementPlacer {
-  static place(
-    cells: Map<string, HexCell>,
-    width: number,
-    height: number
-  ): void {
+  static place(cells: Map<string, HexCell>, width: number, height: number): void {
     const totalHexes = width * height;
     const cityCount = Math.min(6, Math.max(3, Math.round(totalHexes * CITY_DENSITY)));
     const townCount = Math.min(15, Math.max(8, Math.round(totalHexes * TOWN_DENSITY)));
@@ -26,7 +22,7 @@ export class SettlementPlacer {
     cells: Map<string, HexCell>,
     width: number,
     height: number,
-    count: number
+    count: number,
   ): void {
     const candidates: Array<{ coord: HexCoord; score: number }> = [];
 
@@ -51,9 +47,7 @@ export class SettlementPlacer {
     const placed: HexCoord[] = [];
     for (const candidate of candidates) {
       if (placed.length >= count) break;
-      const tooClose = placed.some(
-        (c) => HexGrid.distance(c, candidate.coord) < MIN_CITY_DISTANCE
-      );
+      const tooClose = placed.some((c) => HexGrid.distance(c, candidate.coord) < MIN_CITY_DISTANCE);
       if (!tooClose) {
         const cell = cells.get(HexGrid.key(candidate.coord))!;
         cell.settlement = SettlementType.City;
@@ -66,7 +60,7 @@ export class SettlementPlacer {
     cells: Map<string, HexCell>,
     _width: number,
     _height: number,
-    count: number
+    count: number,
   ): void {
     const cities = [...cells.values()]
       .filter((c) => c.settlement === SettlementType.City)
@@ -80,7 +74,8 @@ export class SettlementPlacer {
         cell.terrain !== TerrainType.Plains &&
         cell.terrain !== TerrainType.Forest &&
         cell.terrain !== TerrainType.Hills
-      ) continue;
+      )
+        continue;
 
       let score = 0;
 
@@ -104,7 +99,7 @@ export class SettlementPlacer {
       if (placed.length >= count) break;
 
       const tooCloseToTown = placed.some(
-        (t) => HexGrid.distance(t, candidate.coord) < MIN_TOWN_DISTANCE
+        (t) => HexGrid.distance(t, candidate.coord) < MIN_TOWN_DISTANCE,
       );
       if (tooCloseToTown) continue;
 

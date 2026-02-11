@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { MapGenerator } from '../MapGenerator';
 import type { MapConfig } from '../types';
 
@@ -51,9 +51,7 @@ describe('MapGenerator', () => {
 
     it('has settlements placed', () => {
       const map = MapGenerator.generate(config);
-      const settlements = [...map.cells.values()].filter(
-        (c) => c.settlement !== null
-      );
+      const settlements = [...map.cells.values()].filter((c) => c.settlement !== null);
       expect(settlements.length).toBeGreaterThan(0);
     });
 

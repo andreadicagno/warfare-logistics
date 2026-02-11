@@ -1,8 +1,8 @@
 import { createNoise2D } from 'simplex-noise';
-import type { HexCell, HexCoord, MapConfig } from './types';
-import { TerrainType } from './types';
 import { HexGrid } from './HexGrid';
 import { mulberry32 } from './rng';
+import type { HexCell, HexCoord, MapConfig } from './types';
+import { TerrainType } from './types';
 
 type Geography = MapConfig['geography'];
 
@@ -28,18 +28,9 @@ export class TerrainGenerator {
     for (let q = 0; q < width; q++) {
       for (let r = 0; r < height; r++) {
         const coord: HexCoord = { q, r };
-        const elevation = TerrainGenerator.sampleElevation(
-          coord,
-          width,
-          height,
-          elevationNoise,
-        );
+        const elevation = TerrainGenerator.sampleElevation(coord, width, height, elevationNoise);
         const moisture = TerrainGenerator.sampleMoisture(coord, moistureNoise);
-        const terrain = TerrainGenerator.assignTerrain(
-          elevation,
-          moisture,
-          geography,
-        );
+        const terrain = TerrainGenerator.assignTerrain(elevation, moisture, geography);
 
         cells.set(HexGrid.key(coord), {
           coord,
@@ -79,39 +70,25 @@ export class TerrainGenerator {
     return Math.max(0, Math.min(1, value));
   }
 
-  private static sampleMoisture(
-    coord: HexCoord,
-    noise: (x: number, y: number) => number,
-  ): number {
+  private static sampleMoisture(coord: HexCoord, noise: (x: number, y: number) => number): number {
     const scale = 0.08;
-    const value =
-      (noise(coord.q * scale + 100, coord.r * scale + 100) + 1) / 2;
+    const value = (noise(coord.q * scale + 100, coord.r * scale + 100) + 1) / 2;
     return Math.max(0, Math.min(1, value));
   }
 
-  static assignTerrain(
-    elevation: number,
-    moisture: number,
-    geography: Geography,
-  ): TerrainType {
+  static assignTerrain(elevation: number, moisture: number, geography: Geography): TerrainType {
     const offset = GEOGRAPHY_OFFSETS[geography];
     const moistureThreshold = 0.5;
 
     if (elevation < 0.2 + offset) return TerrainType.Water;
     if (elevation < 0.35 + offset) {
-      return moisture > moistureThreshold
-        ? TerrainType.Marsh
-        : TerrainType.Plains;
+      return moisture > moistureThreshold ? TerrainType.Marsh : TerrainType.Plains;
     }
     if (elevation < 0.55 + offset) {
-      return moisture > moistureThreshold
-        ? TerrainType.Forest
-        : TerrainType.Plains;
+      return moisture > moistureThreshold ? TerrainType.Forest : TerrainType.Plains;
     }
     if (elevation < 0.75 + offset) {
-      return moisture > moistureThreshold
-        ? TerrainType.Forest
-        : TerrainType.Hills;
+      return moisture > moistureThreshold ? TerrainType.Forest : TerrainType.Hills;
     }
     return TerrainType.Mountain;
   }

@@ -1,75 +1,64 @@
-import { Container, Graphics } from "pixi.js";
-import { HexGrid } from "@core/map/HexGrid";
-import type { GameMap } from "@core/map/types";
-import { TerrainType } from "@core/map/types";
-import { HexRenderer } from "../HexRenderer";
+import { HexGrid } from '@core/map/HexGrid';
+import type { GameMap } from '@core/map/types';
+import { TerrainType } from '@core/map/types';
+import { Container, Graphics } from 'pixi.js';
+import { HexRenderer } from '../HexRenderer';
 
 const TERRAIN_COLORS: Record<TerrainType, number> = {
-	[TerrainType.Water]: 0x2b4a6b,
-	[TerrainType.Plains]: 0x6b7a4a,
-	[TerrainType.Forest]: 0x3a5a35,
-	[TerrainType.Hills]: 0x7a6b50,
-	[TerrainType.Mountain]: 0x5a5a65,
-	[TerrainType.Marsh]: 0x4a6a55,
+  [TerrainType.Water]: 0x2b4a6b,
+  [TerrainType.Plains]: 0x6b7a4a,
+  [TerrainType.Forest]: 0x3a5a35,
+  [TerrainType.Hills]: 0x7a6b50,
+  [TerrainType.Mountain]: 0x5a5a65,
+  [TerrainType.Marsh]: 0x4a6a55,
 };
 
 const BORDER_COLOR = 0x2a2a35;
 
 export class TerrainLayer {
-	readonly container = new Container();
-	private graphics = new Graphics();
-	private gameMap: GameMap;
+  readonly container = new Container();
+  private graphics = new Graphics();
+  private gameMap: GameMap;
 
-	constructor(gameMap: GameMap) {
-		this.gameMap = gameMap;
-		this.container.addChild(this.graphics);
-	}
+  constructor(gameMap: GameMap) {
+    this.gameMap = gameMap;
+    this.container.addChild(this.graphics);
+  }
 
-	build(bounds: {
-		minX: number;
-		minY: number;
-		maxX: number;
-		maxY: number;
-	}): void {
-		this.graphics.clear();
+  build(bounds: { minX: number; minY: number; maxX: number; maxY: number }): void {
+    this.graphics.clear();
 
-		const margin = HexRenderer.HEX_SIZE * 2;
-		const minQ = Math.max(
-			0,
-			HexRenderer.pixelToHex(bounds.minX - margin, bounds.minY).q - 1,
-		);
-		const maxQ = Math.min(
-			this.gameMap.width - 1,
-			HexRenderer.pixelToHex(bounds.maxX + margin, bounds.maxY).q + 1,
-		);
-		const minR = Math.max(
-			0,
-			HexRenderer.pixelToHex(bounds.minX, bounds.minY - margin).r - 1,
-		);
-		const maxR = Math.min(
-			this.gameMap.height - 1,
-			HexRenderer.pixelToHex(bounds.maxX, bounds.maxY + margin).r + 1,
-		);
+    const margin = HexRenderer.HEX_SIZE * 2;
+    const minQ = Math.max(0, HexRenderer.pixelToHex(bounds.minX - margin, bounds.minY).q - 1);
+    const maxQ = Math.min(
+      this.gameMap.width - 1,
+      HexRenderer.pixelToHex(bounds.maxX + margin, bounds.maxY).q + 1,
+    );
+    const minR = Math.max(0, HexRenderer.pixelToHex(bounds.minX, bounds.minY - margin).r - 1);
+    const maxR = Math.min(
+      this.gameMap.height - 1,
+      HexRenderer.pixelToHex(bounds.maxX, bounds.maxY + margin).r + 1,
+    );
 
-		for (let q = minQ; q <= maxQ; q++) {
-			for (let r = minR; r <= maxR; r++) {
-				const cell = this.gameMap.cells.get(HexGrid.key({ q, r }));
-				if (!cell) continue;
+    for (let q = minQ; q <= maxQ; q++) {
+      for (let r = minR; r <= maxR; r++) {
+        const cell = this.gameMap.cells.get(HexGrid.key({ q, r }));
+        if (!cell) continue;
 
-				const px = HexRenderer.hexToPixel(cell.coord);
-				const verts = HexRenderer.vertices(px.x, px.y);
-				const flat = verts.flatMap((v) => [v.x, v.y]);
+        const px = HexRenderer.hexToPixel(cell.coord);
+        const verts = HexRenderer.vertices(px.x, px.y);
+        const flat = verts.flatMap((v) => [v.x, v.y]);
 
-				this.graphics.poly(flat);
-				this.graphics.fill({ color: TERRAIN_COLORS[cell.terrain] });
-				this.graphics.poly(flat);
-				this.graphics.stroke({ width: 1, color: BORDER_COLOR });
-			}
-		}
-	}
+        this.graphics.poly(flat);
+        this.graphics.fill({ color: TERRAIN_COLORS[cell.terrain] });
+        this.graphics.poly(flat);
+        this.graphics.stroke({ width: 1, color: BORDER_COLOR });
+      }
+    }
+  }
 
-	destroy(): void {
-		this.container.removeChildren();
-		this.graphics.destroy();
-	}
+  destroy(): void {
+    this.container.removeChildren();
+    this.graphics.destroy();
+  }
 }

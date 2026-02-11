@@ -1,7 +1,7 @@
-import { type Application } from 'pixi.js';
 import { MapGenerator } from '@core/map/MapGenerator';
 import type { GameMap } from '@core/map/types';
 import { MapRenderer } from '@ui/MapRenderer';
+import type { Application } from 'pixi.js';
 
 export class Game {
   private app: Application;

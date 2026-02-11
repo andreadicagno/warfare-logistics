@@ -56,7 +56,10 @@ export class Camera {
   applyZoom(deltaY: number, screenX: number, screenY: number): void {
     const worldBefore = this.screenToWorld(screenX, screenY);
     const zoomFactor = 1 - deltaY * 0.01;
-    const newScale = Math.min(this.maxScale, Math.max(this.minScale, this.container.scale.x * zoomFactor));
+    const newScale = Math.min(
+      this.maxScale,
+      Math.max(this.minScale, this.container.scale.x * zoomFactor),
+    );
     this.container.scale.set(newScale);
     const worldAfter = this.screenToWorld(screenX, screenY);
     this.container.position.x += (worldAfter.x - worldBefore.x) * this.container.scale.x;

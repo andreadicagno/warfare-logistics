@@ -1,16 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { HexGrid } from '../HexGrid';
 import { SmoothingPass } from '../SmoothingPass';
 import { TerrainGenerator } from '../TerrainGenerator';
-import { HexGrid } from '../HexGrid';
 import type { HexCell } from '../types';
 import { TerrainType } from '../types';
 
-function makeCell(
-  q: number,
-  r: number,
-  terrain: TerrainType,
-  elevation = 0.5,
-): HexCell {
+function makeCell(q: number, r: number, terrain: TerrainType, elevation = 0.5): HexCell {
   return {
     coord: { q, r },
     terrain,
@@ -27,10 +22,7 @@ describe('SmoothingPass', () => {
       const cells = new Map<string, HexCell>();
       cells.set('5,5', makeCell(5, 5, TerrainType.Mountain, 0.8));
       for (const n of HexGrid.neighbors({ q: 5, r: 5 })) {
-        cells.set(
-          HexGrid.key(n),
-          makeCell(n.q, n.r, TerrainType.Plains, 0.4),
-        );
+        cells.set(HexGrid.key(n), makeCell(n.q, n.r, TerrainType.Plains, 0.4));
       }
       for (const n of HexGrid.neighbors({ q: 5, r: 5 })) {
         for (const nn of HexGrid.neighbors(n)) {
@@ -64,10 +56,7 @@ describe('SmoothingPass', () => {
       const cells = new Map<string, HexCell>();
       cells.set('5,5', makeCell(5, 5, TerrainType.Water, 0.1));
       for (const n of HexGrid.neighbors({ q: 5, r: 5 })) {
-        cells.set(
-          HexGrid.key(n),
-          makeCell(n.q, n.r, TerrainType.Plains, 0.4),
-        );
+        cells.set(HexGrid.key(n), makeCell(n.q, n.r, TerrainType.Plains, 0.4));
       }
 
       SmoothingPass.removeIsolatedWater(cells, 20, 20);

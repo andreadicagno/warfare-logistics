@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { HexGrid } from '../HexGrid';
 import { RiverGenerator } from '../RiverGenerator';
 import { TerrainGenerator } from '../TerrainGenerator';
 import { TerrainType } from '../types';
-import { HexGrid } from '../HexGrid';
 
 describe('RiverGenerator', () => {
   function makeMap() {

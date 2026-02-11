@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import { RoadGenerator } from '../RoadGenerator';
-import { TerrainGenerator } from '../TerrainGenerator';
-import { RiverGenerator } from '../RiverGenerator';
-import { SmoothingPass } from '../SmoothingPass';
-import { SettlementPlacer } from '../SettlementPlacer';
-import { TerrainType } from '../types';
+import { describe, expect, it } from 'vitest';
 import { HexGrid } from '../HexGrid';
+import { RiverGenerator } from '../RiverGenerator';
+import { RoadGenerator } from '../RoadGenerator';
+import { SettlementPlacer } from '../SettlementPlacer';
+import { SmoothingPass } from '../SmoothingPass';
+import { TerrainGenerator } from '../TerrainGenerator';
 import type { HexCell } from '../types';
+import { TerrainType } from '../types';
 
 describe('RoadGenerator', () => {
   function makeMap() {

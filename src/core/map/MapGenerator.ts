@@ -1,9 +1,9 @@
-import type { GameMap, MapConfig } from './types';
-import { TerrainGenerator } from './TerrainGenerator';
 import { RiverGenerator } from './RiverGenerator';
-import { SmoothingPass } from './SmoothingPass';
-import { SettlementPlacer } from './SettlementPlacer';
 import { RoadGenerator } from './RoadGenerator';
+import { SettlementPlacer } from './SettlementPlacer';
+import { SmoothingPass } from './SmoothingPass';
+import { TerrainGenerator } from './TerrainGenerator';
+import type { GameMap, MapConfig } from './types';
 
 const MAP_SIZES: Record<MapConfig['mapSize'], { width: number; height: number }> = {
   small: { width: 40, height: 30 },
@@ -29,7 +29,10 @@ export class MapGenerator {
 
     // Initial infrastructure
     const { roads, railways } = RoadGenerator.generate(
-      cells, width, height, config.initialInfrastructure
+      cells,
+      width,
+      height,
+      config.initialInfrastructure,
     );
 
     return {

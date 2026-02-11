@@ -1,7 +1,7 @@
-import type { HexCell, HexCoord, RiverPath } from './types';
-import { TerrainType } from './types';
 import { HexGrid } from './HexGrid';
 import { mulberry32 } from './rng';
+import type { HexCell, HexCoord, RiverPath } from './types';
+import { TerrainType } from './types';
 
 const RIVER_COUNT_MIN = 3;
 const RIVER_COUNT_MAX = 5;
@@ -42,9 +42,7 @@ export class RiverGenerator {
     const candidates = [...cells.values()]
       .filter(
         (c) =>
-          c.elevation > 0.55 &&
-          c.terrain !== TerrainType.Water &&
-          c.terrain !== TerrainType.Marsh,
+          c.elevation > 0.55 && c.terrain !== TerrainType.Water && c.terrain !== TerrainType.Marsh,
       )
       .sort((a, b) => b.elevation - a.elevation);
 

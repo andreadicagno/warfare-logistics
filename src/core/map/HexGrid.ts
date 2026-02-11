@@ -2,12 +2,12 @@ import type { HexCoord } from './types';
 
 // Flat-top axial direction vectors (edges 0-5, clockwise from east)
 const DIRECTIONS: HexCoord[] = [
-  { q: 1, r: 0 },   // 0: E
-  { q: 1, r: -1 },  // 1: NE
-  { q: 0, r: -1 },  // 2: NW
-  { q: -1, r: 0 },  // 3: W
-  { q: -1, r: 1 },  // 4: SW
-  { q: 0, r: 1 },   // 5: SE
+  { q: 1, r: 0 }, // 0: E
+  { q: 1, r: -1 }, // 1: NE
+  { q: 0, r: -1 }, // 2: NW
+  { q: -1, r: 0 }, // 3: W
+  { q: -1, r: 1 }, // 4: SW
+  { q: 0, r: 1 }, // 5: SE
 ];
 
 // Flat-top hex geometry constants (unit size = 1)
@@ -31,7 +31,7 @@ export class HexGrid {
   static distance(a: HexCoord, b: HexCoord): number {
     const dq = Math.abs(a.q - b.q);
     const dr = Math.abs(a.r - b.r);
-    const ds = Math.abs((-a.q - a.r) - (-b.q - b.r));
+    const ds = Math.abs(-a.q - a.r - (-b.q - b.r));
     return Math.max(dq, dr, ds);
   }
 
@@ -58,13 +58,13 @@ export class HexGrid {
 
   static toPixel(coord: HexCoord): { x: number; y: number } {
     const x = HEX_SIZE * (3 / 2) * coord.q;
-    const y = HEX_SIZE * (SQRT3 / 2 * coord.q + SQRT3 * coord.r);
+    const y = HEX_SIZE * ((SQRT3 / 2) * coord.q + SQRT3 * coord.r);
     return { x, y };
   }
 
   static fromPixel(x: number, y: number): HexCoord {
-    const q = (2 / 3) * x / HEX_SIZE;
-    const r = (-1 / 3 * x + SQRT3 / 3 * y) / HEX_SIZE;
+    const q = ((2 / 3) * x) / HEX_SIZE;
+    const r = ((-1 / 3) * x + (SQRT3 / 3) * y) / HEX_SIZE;
     return HexGrid.roundAxial(q, r);
   }
 

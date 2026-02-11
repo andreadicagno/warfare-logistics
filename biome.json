@@ -17,9 +17,9 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "complexity": { "noForEach": "off" },
-      "style": { "noNonNullAssertion": "warn", "useConst": "error" },
-      "suspicious": { "noExplicitAny": "warn" }
+      "complexity": { "noForEach": "off", "noStaticOnlyClass": "off" },
+      "style": { "noNonNullAssertion": "off", "useConst": "error" },
+      "suspicious": { "noExplicitAny": "off" }
     }
   },
   "javascript": {

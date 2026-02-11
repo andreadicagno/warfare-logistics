@@ -1,6 +1,6 @@
-import type { HexCell, HexCoord, MapConfig, RoutePath } from './types';
-import { TerrainType, SettlementType } from './types';
 import { HexGrid } from './HexGrid';
+import type { HexCell, HexCoord, MapConfig, RoutePath } from './types';
+import { SettlementType, TerrainType } from './types';
 
 type Infrastructure = MapConfig['initialInfrastructure'];
 
@@ -18,7 +18,7 @@ export class RoadGenerator {
     cells: Map<string, HexCell>,
     width: number,
     height: number,
-    infrastructure: Infrastructure
+    infrastructure: Infrastructure,
   ): { roads: RoutePath[]; railways: RoutePath[] } {
     const cities = [...cells.values()]
       .filter((c) => c.settlement === SettlementType.City)
@@ -84,14 +84,11 @@ export class RoadGenerator {
       }
       cityPairs.sort((a, b) => a.dist - b.dist);
 
-      const railCount = infrastructure === 'basic'
-        ? Math.min(2, cityPairs.length)
-        : cityPairs.length;
+      const railCount =
+        infrastructure === 'basic' ? Math.min(2, cityPairs.length) : cityPairs.length;
 
       for (let i = 0; i < railCount; i++) {
-        const path = RoadGenerator.astar(
-          cityPairs[i].from, cityPairs[i].to, cells, width, height
-        );
+        const path = RoadGenerator.astar(cityPairs[i].from, cityPairs[i].to, cells, width, height);
         if (path) {
           railways.push({ hexes: path, type: 'railway' });
         }
@@ -107,7 +104,7 @@ export class RoadGenerator {
     goal: HexCoord,
     cells: Map<string, HexCell>,
     width: number,
-    height: number
+    height: number,
   ): HexCoord[] | null {
     const startKey = HexGrid.key(start);
     const goalKey = HexGrid.key(goal);
@@ -142,7 +139,7 @@ export class RoadGenerator {
         if (!neighborCell) continue;
 
         const cost = TERRAIN_COST[neighborCell.terrain];
-        if (!isFinite(cost)) continue;
+        if (!Number.isFinite(cost)) continue;
 
         const tentativeG = (gScore.get(currentKey) ?? Infinity) + cost;
 
@@ -161,7 +158,7 @@ export class RoadGenerator {
   private static reconstructPath(
     cameFrom: Map<string, string>,
     endKey: string,
-    cells: Map<string, HexCell>
+    cells: Map<string, HexCell>,
   ): HexCoord[] {
     const path: HexCoord[] = [];
     let current: string | undefined = endKey;

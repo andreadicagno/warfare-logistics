@@ -1,6 +1,6 @@
+import { HexGrid } from './HexGrid';
 import type { HexCell } from './types';
 import { TerrainType } from './types';
-import { HexGrid } from './HexGrid';
 
 const TERRAIN_GROUP: Record<TerrainType, number> = {
   [TerrainType.Water]: 0,
@@ -12,11 +12,7 @@ const TERRAIN_GROUP: Record<TerrainType, number> = {
 };
 
 export class SmoothingPass {
-  static apply(
-    cells: Map<string, HexCell>,
-    width: number,
-    height: number,
-  ): void {
+  static apply(cells: Map<string, HexCell>, width: number, height: number): void {
     SmoothingPass.removeSingleHexAnomalies(cells, width, height);
     SmoothingPass.removeIsolatedWater(cells, width, height);
   }
@@ -38,20 +34,14 @@ export class SmoothingPass {
 
       const cellGroup = TERRAIN_GROUP[cell.terrain];
       const neighborGroups = neighbors.map((n) => TERRAIN_GROUP[n.terrain]);
-      const avgGroup =
-        neighborGroups.reduce((a, b) => a + b, 0) / neighborGroups.length;
+      const avgGroup = neighborGroups.reduce((a, b) => a + b, 0) / neighborGroups.length;
 
-      const hasSameGroupNeighbor = neighborGroups.some(
-        (g) => Math.abs(g - cellGroup) <= 1,
-      );
+      const hasSameGroupNeighbor = neighborGroups.some((g) => Math.abs(g - cellGroup) <= 1);
 
       if (!hasSameGroupNeighbor && Math.abs(cellGroup - avgGroup) > 2) {
         const terrainCounts = new Map<TerrainType, number>();
         for (const n of neighbors) {
-          terrainCounts.set(
-            n.terrain,
-            (terrainCounts.get(n.terrain) ?? 0) + 1,
-          );
+          terrainCounts.set(n.terrain, (terrainCounts.get(n.terrain) ?? 0) + 1);
         }
         let bestTerrain = neighbors[0].terrain;
         let bestCount = 0;
@@ -70,11 +60,7 @@ export class SmoothingPass {
     }
   }
 
-  static removeIsolatedWater(
-    cells: Map<string, HexCell>,
-    width: number,
-    height: number,
-  ): void {
+  static removeIsolatedWater(cells: Map<string, HexCell>, width: number, height: number): void {
     const changes: string[] = [];
 
     for (const [key, cell] of cells) {
@@ -85,9 +71,7 @@ export class SmoothingPass {
         .map((n) => cells.get(HexGrid.key(n))!)
         .filter(Boolean);
 
-      const hasWaterNeighbor = neighbors.some(
-        (n) => n.terrain === TerrainType.Water,
-      );
+      const hasWaterNeighbor = neighbors.some((n) => n.terrain === TerrainType.Water);
 
       if (!hasWaterNeighbor) {
         changes.push(key);
