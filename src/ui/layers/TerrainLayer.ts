@@ -19,7 +19,6 @@ const TERRAIN_COLORS: Record<TerrainType, number> = {
 
 const BORDER_WIDTH = 0.5;
 const BORDER_DARKEN = 0.3;
-const URBAN_GRID_COLOR = 0x9b7b6b;
 const URBAN_DENSE_BASE = 0x6b4535;
 const URBAN_SPARSE_BASE = 0x9b6e5b;
 const NOISE_FREQUENCY = 0.15;
@@ -91,40 +90,22 @@ export class TerrainLayer {
     this.graphics.fill({ color: baseColor });
 
     const hash = (cell.coord.q * 73856093) ^ (cell.coord.r * 19349663);
-    const offsetX = ((hash & 0xff) / 255) * 2 - 1;
-    const offsetY = (((hash >> 8) & 0xff) / 255) * 2 - 1;
-
     const hexSize = HexRenderer.HEX_SIZE;
+    const dotColor = darken(baseColor, 0.25);
+    const dotCount = isDense ? 10 + (Math.abs(hash) % 5) : 4 + (Math.abs(hash) % 3);
+    const dotSize = isDense ? 1.2 : 1.0;
+    const spread = hexSize * 0.65;
 
-    const hLines = isDense ? 4 : 3;
-    for (let i = 0; i < hLines; i++) {
-      const t = ((i + 0.5) / hLines) * 2 - 1;
-      const y = px.y + t * hexSize * 0.7 + offsetY;
-      const halfWidth = hexSize * 0.5;
-      this.graphics.moveTo(px.x - halfWidth, y);
-      this.graphics.lineTo(px.x + halfWidth, y);
-    }
-
-    const vLines = isDense ? 3 : 2;
-    for (let i = 0; i < vLines; i++) {
-      const t = ((i + 0.5) / vLines) * 2 - 1;
-      const x = px.x + t * hexSize * 0.5 + offsetX;
-      const halfHeight = hexSize * 0.6;
-      this.graphics.moveTo(x, px.y - halfHeight);
-      this.graphics.lineTo(x, px.y + halfHeight);
-    }
-
-    this.graphics.stroke({ width: 0.5, color: URBAN_GRID_COLOR });
-
-    const roofCount = isDense ? 2 + (Math.abs(hash) % 3) : 1 + (Math.abs(hash) % 2);
-    for (let i = 0; i < roofCount; i++) {
-      const rHash = (hash * (i + 1)) & 0xffff;
-      const rx = px.x + ((rHash & 0xff) / 255 - 0.5) * hexSize * 0.6;
-      const ry = px.y + (((rHash >> 8) & 0xff) / 255 - 0.5) * hexSize * 0.6;
-      const rw = hexSize * 0.08;
-      const rh = hexSize * 0.06;
-      this.graphics.rect(rx - rw / 2, ry - rh / 2, rw, rh);
-      this.graphics.fill({ color: URBAN_GRID_COLOR });
+    for (let i = 0; i < dotCount; i++) {
+      const h = (hash * (i + 1) + i * 7919) & 0xffff;
+      const angle = ((h & 0xff) / 255) * Math.PI * 2;
+      const dist = (((h >> 8) & 0xff) / 255) * spread;
+      // Bias toward center: square root distribution
+      const r = Math.sqrt(dist / spread) * spread;
+      const dx = Math.cos(angle) * r;
+      const dy = Math.sin(angle) * r;
+      this.graphics.rect(px.x + dx - dotSize / 2, px.y + dy - dotSize / 2, dotSize, dotSize);
+      this.graphics.fill({ color: dotColor });
     }
 
     const hasNonUrbanNeighbor = urbanNeighborCount < 6;
