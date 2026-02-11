@@ -7,9 +7,9 @@ import { HexRenderer } from '../HexRenderer';
 
 const ALLIED_COLOR = 0x4488cc;
 const ENEMY_COLOR = 0xcc4444;
-const ALPHA_MAX = 0.45;
-const ALPHA_MIN = 0.08;
-const GRADIENT_DISTANCE = 6; // gradient from ALPHA_MAX to ALPHA_MIN over 6 hexes, then ALPHA_MIN
+const ALPHA_MAX = 0.6;
+const ALPHA_MIN = 0.1;
+const GRADIENT_DISTANCE = 8; // gradient from ALPHA_MAX to ALPHA_MIN over 8 hexes, then ALPHA_MIN
 
 export class TerritoryLayer {
   readonly container = new Container();
