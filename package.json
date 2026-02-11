@@ -21,7 +21,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "pixi.js": "^8.16.0"
+    "pixi.js": "^8.16.0",
+    "simplex-noise": "^4.0.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",
