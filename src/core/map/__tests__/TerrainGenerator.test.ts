@@ -41,7 +41,8 @@ describe('TerrainGenerator', () => {
       const waterCells = [...cells.values()].filter((c) => c.terrain === TerrainType.Water);
       expect(waterCells.length).toBeGreaterThan(0);
       for (const cell of waterCells) {
-        expect(cell.elevation).toBeLessThan(0.25);
+        // Ocean at < 0.2, inland lakes at 0.2-0.35 with high moisture
+        expect(cell.elevation).toBeLessThan(0.35);
       }
     });
 
@@ -95,8 +96,12 @@ describe('TerrainGenerator', () => {
       expect(TerrainGenerator.assignTerrain(0.9, 0.5, 'mixed')).toBe(TerrainType.Mountain);
     });
 
-    it('returns Marsh for low-mid elevation and high moisture', () => {
-      expect(TerrainGenerator.assignTerrain(0.28, 0.8, 'mixed')).toBe(TerrainType.Marsh);
+    it('returns Water for low-mid elevation and very high moisture (inland lake)', () => {
+      expect(TerrainGenerator.assignTerrain(0.28, 0.75, 'mixed')).toBe(TerrainType.Water);
+    });
+
+    it('returns Marsh for low-mid elevation and moderate moisture', () => {
+      expect(TerrainGenerator.assignTerrain(0.28, 0.55, 'mixed')).toBe(TerrainType.Marsh);
     });
 
     it('returns Forest for mid elevation and high moisture', () => {

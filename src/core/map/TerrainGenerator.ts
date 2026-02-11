@@ -85,6 +85,7 @@ export class TerrainGenerator {
 
     if (elevation < 0.2 + offset) return TerrainType.Water;
     if (elevation < 0.35 + offset) {
+      if (moisture > 0.7) return TerrainType.Water; // noise-based inland lake
       return moisture > moistureThreshold ? TerrainType.Marsh : TerrainType.Plains;
     }
     if (elevation < 0.55 + offset) {
