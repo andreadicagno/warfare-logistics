@@ -1,26 +1,23 @@
 import { HexGrid } from './HexGrid';
-import type { HexCell, HexCoord, MapConfig, RoutePath } from './types';
+import type { HexCell, HexCoord, RoadParams, RoutePath } from './types';
 import { SettlementType, TerrainType } from './types';
-
-type Infrastructure = MapConfig['initialInfrastructure'];
-
-const TERRAIN_COST: Record<TerrainType, number> = {
-  [TerrainType.Plains]: 1,
-  [TerrainType.Forest]: 2,
-  [TerrainType.Hills]: 3,
-  [TerrainType.Marsh]: 3,
-  [TerrainType.River]: 6,
-  [TerrainType.Mountain]: Infinity,
-  [TerrainType.Water]: Infinity,
-};
 
 export class RoadGenerator {
   static generate(
     cells: Map<string, HexCell>,
     width: number,
     height: number,
-    infrastructure: Infrastructure,
+    params: RoadParams,
   ): { roads: RoutePath[]; railways: RoutePath[] } {
+    const terrainCost: Record<TerrainType, number> = {
+      [TerrainType.Plains]: params.plainsCost,
+      [TerrainType.Forest]: params.forestCost,
+      [TerrainType.Hills]: params.hillsCost,
+      [TerrainType.Marsh]: params.marshCost,
+      [TerrainType.River]: params.riverCost,
+      [TerrainType.Mountain]: Infinity,
+      [TerrainType.Water]: Infinity,
+    };
     const cities = [...cells.values()]
       .filter((c) => c.settlement === SettlementType.City)
       .map((c) => c.coord);
@@ -45,7 +42,7 @@ export class RoadGenerator {
       if (nearestCity) {
         const pairKey = RoadGenerator.pairKey(town, nearestCity);
         if (!usedPairs.has(pairKey)) {
-          const path = RoadGenerator.astar(town, nearestCity, cells, width, height);
+          const path = RoadGenerator.astar(town, nearestCity, cells, width, height, terrainCost);
           if (path) {
             roads.push({ hexes: path, type: 'road' });
             usedPairs.add(pairKey);
@@ -54,13 +51,20 @@ export class RoadGenerator {
       }
     }
 
-    // Connect cities to each other if within 20 hexes
+    // Connect cities to each other if within range
     for (let i = 0; i < cities.length; i++) {
       for (let j = i + 1; j < cities.length; j++) {
-        if (HexGrid.distance(cities[i], cities[j]) <= 20) {
+        if (HexGrid.distance(cities[i], cities[j]) <= params.cityConnectionDistance) {
           const pairKey = RoadGenerator.pairKey(cities[i], cities[j]);
           if (!usedPairs.has(pairKey)) {
-            const path = RoadGenerator.astar(cities[i], cities[j], cells, width, height);
+            const path = RoadGenerator.astar(
+              cities[i],
+              cities[j],
+              cells,
+              width,
+              height,
+              terrainCost,
+            );
             if (path) {
               roads.push({ hexes: path, type: 'road' });
               usedPairs.add(pairKey);
@@ -72,7 +76,7 @@ export class RoadGenerator {
 
     // Railways
     const railways: RoutePath[] = [];
-    if (infrastructure !== 'none') {
+    if (params.infrastructure !== 'none') {
       const cityPairs: Array<{ from: HexCoord; to: HexCoord; dist: number }> = [];
       for (let i = 0; i < cities.length; i++) {
         for (let j = i + 1; j < cities.length; j++) {
@@ -86,10 +90,17 @@ export class RoadGenerator {
       cityPairs.sort((a, b) => a.dist - b.dist);
 
       const railCount =
-        infrastructure === 'basic' ? Math.min(2, cityPairs.length) : cityPairs.length;
+        params.infrastructure === 'basic' ? Math.min(2, cityPairs.length) : cityPairs.length;
 
       for (let i = 0; i < railCount; i++) {
-        const path = RoadGenerator.astar(cityPairs[i].from, cityPairs[i].to, cells, width, height);
+        const path = RoadGenerator.astar(
+          cityPairs[i].from,
+          cityPairs[i].to,
+          cells,
+          width,
+          height,
+          terrainCost,
+        );
         if (path) {
           railways.push({ hexes: path, type: 'railway' });
         }
@@ -106,6 +117,7 @@ export class RoadGenerator {
     cells: Map<string, HexCell>,
     width: number,
     height: number,
+    terrainCost: Record<TerrainType, number>,
   ): HexCoord[] | null {
     const startKey = HexGrid.key(start);
     const goalKey = HexGrid.key(goal);
@@ -139,7 +151,7 @@ export class RoadGenerator {
         const neighborCell = cells.get(neighborKey);
         if (!neighborCell) continue;
 
-        const cost = TERRAIN_COST[neighborCell.terrain];
+        const cost = terrainCost[neighborCell.terrain];
         if (!Number.isFinite(cost)) continue;
 
         const tentativeG = (gScore.get(currentKey) ?? Infinity) + cost;

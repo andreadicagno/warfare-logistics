@@ -5,28 +5,50 @@ import { RoadGenerator } from '../RoadGenerator';
 import { SettlementPlacer } from '../SettlementPlacer';
 import { SmoothingPass } from '../SmoothingPass';
 import { TerrainGenerator } from '../TerrainGenerator';
-import type { HexCell } from '../types';
-import { TerrainType } from '../types';
+import type { HexCell, RoadParams } from '../types';
+import { DEFAULT_GENERATION_PARAMS, TerrainType } from '../types';
+
+const defaultRoadParams = DEFAULT_GENERATION_PARAMS.roads;
+
+function roadParamsWithInfra(infrastructure: RoadParams['infrastructure']): RoadParams {
+  return { ...defaultRoadParams, infrastructure };
+}
+
+const defaultTerrainCost: Record<TerrainType, number> = {
+  [TerrainType.Plains]: defaultRoadParams.plainsCost,
+  [TerrainType.Forest]: defaultRoadParams.forestCost,
+  [TerrainType.Hills]: defaultRoadParams.hillsCost,
+  [TerrainType.Marsh]: defaultRoadParams.marshCost,
+  [TerrainType.River]: defaultRoadParams.riverCost,
+  [TerrainType.Mountain]: Infinity,
+  [TerrainType.Water]: Infinity,
+};
 
 describe('RoadGenerator', () => {
   function makeMap() {
-    const cells = TerrainGenerator.generate(40, 30, 'mixed', 42);
-    RiverGenerator.generate(cells, 40, 30, 42);
-    SmoothingPass.apply(cells, 40, 30);
-    SettlementPlacer.place(cells, 40, 30);
+    const cells = TerrainGenerator.generate(
+      40,
+      30,
+      DEFAULT_GENERATION_PARAMS.terrain,
+      DEFAULT_GENERATION_PARAMS.seaSides,
+      42,
+    );
+    RiverGenerator.generate(cells, 40, 30, 42, DEFAULT_GENERATION_PARAMS.rivers);
+    SmoothingPass.apply(cells, 40, 30, DEFAULT_GENERATION_PARAMS.smoothing);
+    SettlementPlacer.place(cells, 40, 30, DEFAULT_GENERATION_PARAMS.settlements);
     return cells;
   }
 
   describe('generate', () => {
     it('produces road routes', () => {
       const cells = makeMap();
-      const { roads } = RoadGenerator.generate(cells, 40, 30, 'basic');
+      const { roads } = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('basic'));
       expect(roads.length).toBeGreaterThan(0);
     });
 
     it('all roads have type road', () => {
       const cells = makeMap();
-      const { roads } = RoadGenerator.generate(cells, 40, 30, 'basic');
+      const { roads } = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('basic'));
       for (const road of roads) {
         expect(road.type).toBe('road');
       }
@@ -34,7 +56,7 @@ describe('RoadGenerator', () => {
 
     it('road paths contain only adjacent hexes', () => {
       const cells = makeMap();
-      const { roads } = RoadGenerator.generate(cells, 40, 30, 'basic');
+      const { roads } = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('basic'));
       for (const road of roads) {
         for (let i = 1; i < road.hexes.length; i++) {
           expect(HexGrid.distance(road.hexes[i - 1], road.hexes[i])).toBe(1);
@@ -44,7 +66,7 @@ describe('RoadGenerator', () => {
 
     it('roads avoid mountains and water', () => {
       const cells = makeMap();
-      const { roads } = RoadGenerator.generate(cells, 40, 30, 'basic');
+      const { roads } = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('basic'));
       for (const road of roads) {
         for (const hex of road.hexes) {
           const cell = cells.get(HexGrid.key(hex))!;
@@ -56,26 +78,26 @@ describe('RoadGenerator', () => {
 
     it('produces no railways with infrastructure=none', () => {
       const cells = makeMap();
-      const { railways } = RoadGenerator.generate(cells, 40, 30, 'none');
+      const { railways } = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('none'));
       expect(railways.length).toBe(0);
     });
 
     it('produces some railways with infrastructure=basic', () => {
       const cells = makeMap();
-      const { railways } = RoadGenerator.generate(cells, 40, 30, 'basic');
+      const { railways } = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('basic'));
       expect(railways.length).toBeGreaterThanOrEqual(1);
       expect(railways.length).toBeLessThanOrEqual(2);
     });
 
     it('produces railways between all cities with infrastructure=developed', () => {
       const cells = makeMap();
-      const { railways } = RoadGenerator.generate(cells, 40, 30, 'developed');
+      const { railways } = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('developed'));
       expect(railways.length).toBeGreaterThanOrEqual(2);
     });
 
     it('all railways have type railway', () => {
       const cells = makeMap();
-      const { railways } = RoadGenerator.generate(cells, 40, 30, 'developed');
+      const { railways } = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('developed'));
       for (const rail of railways) {
         expect(rail.type).toBe('railway');
       }
@@ -97,7 +119,14 @@ describe('RoadGenerator', () => {
           });
         }
       }
-      const path = RoadGenerator.astar({ q: 0, r: 0 }, { q: 2, r: 0 }, cells, 3, 3);
+      const path = RoadGenerator.astar(
+        { q: 0, r: 0 },
+        { q: 2, r: 0 },
+        cells,
+        3,
+        3,
+        defaultTerrainCost,
+      );
       expect(path).not.toBeNull();
       expect(path![0]).toEqual({ q: 0, r: 0 });
       expect(path![path!.length - 1]).toEqual({ q: 2, r: 0 });
@@ -128,7 +157,14 @@ describe('RoadGenerator', () => {
           settlement: null,
         });
       }
-      const path = RoadGenerator.astar({ q: 0, r: 0 }, { q: 2, r: 2 }, cells, 5, 5);
+      const path = RoadGenerator.astar(
+        { q: 0, r: 0 },
+        { q: 2, r: 2 },
+        cells,
+        5,
+        5,
+        defaultTerrainCost,
+      );
       expect(path).toBeNull();
     });
   });
