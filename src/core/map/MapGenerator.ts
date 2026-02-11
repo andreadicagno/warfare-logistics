@@ -1,8 +1,9 @@
 import { RiverGenerator } from './RiverGenerator';
 import { RoadGenerator } from './RoadGenerator';
-import { SettlementPlacer } from './SettlementPlacer';
 import { SmoothingPass } from './SmoothingPass';
+import { SupplyHubPlacer } from './SupplyHubPlacer';
 import { TerrainGenerator } from './TerrainGenerator';
+import { UrbanGenerator } from './UrbanGenerator';
 import type { GameMap, GenerationParams } from './types';
 
 export const MAP_SIZE_PRESETS = {
@@ -30,12 +31,21 @@ export class MapGenerator {
     // Phase 4: Smoothing
     SmoothingPass.apply(cells, width, height, params.smoothing);
 
-    // Settlement placement
-    SettlementPlacer.place(cells, width, height, params.settlements);
+    // Phase 5: Urban clusters
+    const urbanClusters = UrbanGenerator.generate(cells, width, height, params.urban, params.seed);
 
-    // Initial infrastructure
-    const { roads, railways } = RoadGenerator.generate(cells, width, height, params.roads);
+    // Phase 6: Supply hubs
+    const supplyHubs = SupplyHubPlacer.place(cells, width, height, urbanClusters, params.seed);
 
-    return { width, height, cells, roads, railways };
+    // Phase 7: Roads & railways
+    const { roads, railways } = RoadGenerator.generate(
+      cells,
+      width,
+      height,
+      params.roads,
+      urbanClusters,
+    );
+
+    return { width, height, cells, urbanClusters, supplyHubs, roads, railways };
   }
 }
