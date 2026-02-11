@@ -3,6 +3,7 @@ import type { GameMap, HexCoord } from '@core/map/types';
 import { type Application, Container } from 'pixi.js';
 import { Camera } from './Camera';
 import { HexRenderer } from './HexRenderer';
+import { RouteAnimator } from './layers/RouteAnimator';
 import { RouteLayer } from './layers/RouteLayer';
 import { SelectionLayer } from './layers/SelectionLayer';
 import { SupplyHubLayer } from './layers/SupplyHubLayer';
@@ -17,6 +18,7 @@ export class MapRenderer {
   private camera: Camera;
   private terrainLayer: TerrainLayer;
   private routeLayer: RouteLayer;
+  private routeAnimator: RouteAnimator;
   private supplyHubLayer: SupplyHubLayer;
   private selectionLayer: SelectionLayer;
   private boundOnFrame: () => void;
@@ -60,6 +62,13 @@ export class MapRenderer {
     this.terrainLayer.build(newBounds);
     this.routeLayer.build(newBounds);
     this.supplyHubLayer.build(newBounds);
+
+    this.routeAnimator = new RouteAnimator(() => this.camera.scale);
+    this.worldContainer.addChild(this.routeAnimator.container);
+    this.routeAnimator.init(
+      this.routeLayer.computedRoadSplines,
+      this.routeLayer.computedRailwaySplines,
+    );
 
     this.camera.attach();
 
@@ -157,6 +166,7 @@ export class MapRenderer {
     this.app.ticker.remove(this.boundOnFrame);
     this.app.stage.off('pointermove', this.onPointerMove);
     this.camera.detach();
+    this.routeAnimator.destroy();
     this.terrainLayer.destroy();
     this.routeLayer.destroy();
     this.supplyHubLayer.destroy();
@@ -171,6 +181,7 @@ export class MapRenderer {
   };
 
   private onFrame(): void {
+    this.routeAnimator.update(this.app.ticker);
     if (!this.camera.isDirty) return;
     this.camera.clearDirty();
     // All layers build once and cache their geometry.

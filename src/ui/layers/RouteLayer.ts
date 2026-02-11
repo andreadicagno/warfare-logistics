@@ -49,6 +49,16 @@ export class RouteLayer {
   private graphics = new Graphics();
   private gameMap: GameMap;
   private built = false;
+  private roadSplines: BezierSegment[][] = [];
+  private railwaySplines: BezierSegment[][] = [];
+
+  get computedRoadSplines(): BezierSegment[][] {
+    return this.roadSplines;
+  }
+
+  get computedRailwaySplines(): BezierSegment[][] {
+    return this.railwaySplines;
+  }
 
   constructor(gameMap: GameMap) {
     this.gameMap = gameMap;
@@ -146,6 +156,8 @@ export class RouteLayer {
       allSegments.push({ segments: catmullRomToBezier(points), hexes: route.hexes });
     }
 
+    this.roadSplines = allSegments.map((s) => s.segments);
+
     // Pass 1: dark border
     for (const { segments } of allSegments) {
       this.drawBezierPath(segments, ROAD_BORDER_WIDTH, ROAD_BORDER_COLOR);
@@ -179,6 +191,8 @@ export class RouteLayer {
       const points = this.offsetPathPoints(route.hexes, sharedEdges, -1);
       allSegments.push({ segments: catmullRomToBezier(points), hexes: route.hexes });
     }
+
+    this.railwaySplines = allSegments.map((s) => s.segments);
 
     // Pass 1: dark border
     for (const { segments } of allSegments) {
