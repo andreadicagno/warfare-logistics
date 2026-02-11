@@ -1,5 +1,5 @@
-import { Application } from 'pixi.js';
 import { Game } from '@game/Game';
+import { Application } from 'pixi.js';
 
 async function init() {
   // Create PixiJS application

@@ -20,6 +20,25 @@ bun run preview  # Preview production build
 bun run typecheck # Run TypeScript type checking
 ```
 
+## Quality Commands
+
+```bash
+bun run lint       # Check linting (Biome)
+bun run lint:fix   # Fix lint issues automatically
+bun run format     # Check formatting (Biome)
+bun run format:fix # Fix formatting automatically
+bun run test       # Run tests once (Vitest)
+bun run test:watch # Run tests in watch mode
+bun run check      # Run ALL quality gates (lint + typecheck + test)
+```
+
+### Quality Workflow
+
+- Run `bun run check` before committing — validates lint, types, and tests
+- Pre-commit hook runs `biome check` + `tsc --noEmit` automatically
+- Test files are co-located as `*.test.ts` next to source files
+- Config files: `biome.json`, `vitest.config.ts`, `lefthook.yml`
+
 ## Project Structure
 
 ```

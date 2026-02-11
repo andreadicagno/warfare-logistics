@@ -1,4 +1,4 @@
-import { Application, Graphics, Text, TextStyle } from 'pixi.js';
+import { type Application, Graphics, Text, TextStyle } from 'pixi.js';
 
 /**
  * Main game class - orchestrates all game systems
@@ -65,7 +65,7 @@ export class Game {
     });
     const subtitle = new Text({
       text: 'Logistics Strategy Game - MVP Setup Complete',
-      style: subtitleStyle
+      style: subtitleStyle,
     });
     subtitle.anchor.set(0.5);
     subtitle.x = this.app.screen.width / 2;
@@ -80,7 +80,7 @@ export class Game {
     });
     const instructions = new Text({
       text: 'Press SPACE to pause/unpause',
-      style: instructionsStyle
+      style: instructionsStyle,
     });
     instructions.anchor.set(0.5);
     instructions.x = this.app.screen.width / 2;
@@ -90,10 +90,24 @@ export class Game {
     // Placeholder boxes for future UI elements
     this.drawPlaceholderBox(50, 200, 300, 400, 'MAP AREA', 0x0f3460);
     this.drawPlaceholderBox(this.app.screen.width - 350, 200, 300, 400, 'DETAILS PANEL', 0x0f3460);
-    this.drawPlaceholderBox(50, this.app.screen.height - 150, this.app.screen.width - 100, 100, 'NOTIFICATIONS / LOG', 0x0f3460);
+    this.drawPlaceholderBox(
+      50,
+      this.app.screen.height - 150,
+      this.app.screen.width - 100,
+      100,
+      'NOTIFICATIONS / LOG',
+      0x0f3460,
+    );
   }
 
-  private drawPlaceholderBox(x: number, y: number, width: number, height: number, label: string, color: number): void {
+  private drawPlaceholderBox(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    label: string,
+    color: number,
+  ): void {
     const box = new Graphics();
     box.fill({ color, alpha: 0.5 });
     box.roundRect(x, y, width, height, 8);
