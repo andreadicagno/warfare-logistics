@@ -1,7 +1,7 @@
 import { HexGrid } from '@core/map/HexGrid';
 import type { GameMap, HexCoord } from '@core/map/types';
 import { TerrainType } from '@core/map/types';
-import type { RouteHealth } from '@core/mock/types';
+import type { AccessRamp, RouteHealth } from '@core/mock/types';
 import { Container, Graphics } from 'pixi.js';
 import { HexRenderer } from '../HexRenderer';
 import { type BezierSegment, catmullRomToBezier, cubicBezierPoint } from '../spline';
@@ -59,6 +59,7 @@ export class RouteLayer {
   private builtVersion = -1;
   private roadHealths: Map<number, RouteHealth>;
   private railwayHealths: Map<number, RouteHealth>;
+  private accessRamps: AccessRamp[] = [];
   private roadSplines: BezierSegment[][] = [];
   private railwaySplines: BezierSegment[][] = [];
 
@@ -74,10 +75,12 @@ export class RouteLayer {
     gameMap: GameMap,
     roadHealths?: Map<number, RouteHealth>,
     railwayHealths?: Map<number, RouteHealth>,
+    accessRamps?: AccessRamp[],
   ) {
     this.gameMap = gameMap;
     this.roadHealths = roadHealths ?? new Map();
     this.railwayHealths = railwayHealths ?? new Map();
+    this.accessRamps = accessRamps ?? [];
     this.container.addChild(this.graphics);
   }
 
@@ -89,14 +92,17 @@ export class RouteLayer {
     const sharedEdges = this.computeSharedEdges();
     this.drawRoads(sharedEdges);
     this.drawRailways(sharedEdges);
+    this.drawAccessRamps();
   }
 
   updateData(
     roadHealths: Map<number, RouteHealth>,
     railwayHealths: Map<number, RouteHealth>,
+    accessRamps?: AccessRamp[],
   ): void {
     this.roadHealths = roadHealths;
     this.railwayHealths = railwayHealths;
+    if (accessRamps) this.accessRamps = accessRamps;
   }
 
   /** Find hex edges that both a road and a railway traverse. */
@@ -289,6 +295,41 @@ export class RouteLayer {
         this.graphics.lineTo(pt.x + nx * half, pt.y + ny * half);
         this.graphics.stroke({ width: 1, color: RAILWAY_TIE_COLOR });
       }
+    }
+  }
+
+  private drawAccessRamps(): void {
+    for (const ramp of this.accessRamps) {
+      const from = HexRenderer.hexToPixel(ramp.facilityCoord);
+      const to = HexRenderer.hexToPixel(ramp.routeHexCoord);
+
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len === 0) continue;
+
+      // Quadratic Bezier control point: perpendicular offset for natural curve
+      const mx = (from.x + to.x) / 2;
+      const my = (from.y + to.y) / 2;
+      const offset = len * 0.2;
+      const cx = mx - (dy / len) * offset;
+      const cy = my + (dx / len) * offset;
+
+      const isRailway = ramp.routeType === 'railway';
+      const borderColor = isRailway ? RAILWAY_BORDER_COLOR : ROAD_BORDER_COLOR;
+      const fillColor = isRailway ? RAILWAY_FILL_COLOR : ROAD_FILL_COLOR;
+      const borderWidth = Math.round((isRailway ? RAILWAY_BORDER_WIDTH : ROAD_BORDER_WIDTH) * 0.7);
+      const fillWidth = Math.round((isRailway ? RAILWAY_FILL_WIDTH : ROAD_FILL_WIDTH) * 0.7);
+
+      // Border pass
+      this.graphics.moveTo(from.x, from.y);
+      this.graphics.quadraticCurveTo(cx, cy, to.x, to.y);
+      this.graphics.stroke({ width: borderWidth, color: borderColor });
+
+      // Fill pass
+      this.graphics.moveTo(from.x, from.y);
+      this.graphics.quadraticCurveTo(cx, cy, to.x, to.y);
+      this.graphics.stroke({ width: fillWidth, color: fillColor });
     }
   }
 

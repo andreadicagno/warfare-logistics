@@ -82,7 +82,12 @@ export class MapRenderer {
       this.mockSim.state.territory,
       this.mockSim.state.frontLineEdges,
     );
-    this.routeLayer = new RouteLayer(gameMap, roadHealths, railwayHealths);
+    this.routeLayer = new RouteLayer(
+      gameMap,
+      roadHealths,
+      railwayHealths,
+      this.mockSim.state.accessRamps,
+    );
     this.flowLayer = new FlowLayer(() => this.camera.scale);
     this.vehicleLayer = new VehicleLayer(() => this.camera.scale);
     this.supplyHubLayer = new SupplyHubLayer(this.mockSim.state.facilities);

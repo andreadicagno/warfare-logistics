@@ -53,6 +53,7 @@ export class MockSimulation {
     this.generateTerritory();
     this.detectFrontLine();
     this.generateFacilities();
+    this.computeAccessRamps();
     this.placeUnits();
     this.assignRouteHealth();
     this.spawnVehicles();
@@ -823,6 +824,72 @@ export class MockSimulation {
     const damagedCount = Math.min(this.randomInt(1, 2), hubDistances.length);
     for (let i = 0; i < damagedCount; i++) {
       this.state.facilities[hubDistances[i].index].damaged = true;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Access ramps
+  // ---------------------------------------------------------------------------
+
+  private computeAccessRamps(): void {
+    // Build maps of route hex keys for fast lookup
+    const roadHexes = new Map<string, HexCoord>();
+    for (const road of this.map.roads) {
+      for (const hex of road.hexes) {
+        roadHexes.set(HexGrid.key(hex), hex);
+      }
+    }
+    const railHexes = new Map<string, HexCoord>();
+    for (const rw of this.map.railways) {
+      for (const hex of rw.hexes) {
+        railHexes.set(HexGrid.key(hex), hex);
+      }
+    }
+
+    for (const facility of this.state.facilities) {
+      const fKey = HexGrid.key(facility.coord);
+
+      // Skip if already on a route
+      if (roadHexes.has(fKey) || railHexes.has(fKey)) continue;
+
+      // railHub prefers railway; depot/factory prefer road
+      const preferRailway = facility.kind === 'railHub';
+      const primarySet = preferRailway ? railHexes : roadHexes;
+      const fallbackSet = preferRailway ? roadHexes : railHexes;
+      const primaryType: 'road' | 'railway' = preferRailway ? 'railway' : 'road';
+      const fallbackType: 'road' | 'railway' = preferRailway ? 'road' : 'railway';
+
+      let bestCoord: HexCoord | null = null;
+      let bestType: 'road' | 'railway' = primaryType;
+      let bestDist = Infinity;
+
+      for (const [, coord] of primarySet) {
+        const d = HexGrid.distance(facility.coord, coord);
+        if (d <= 2 && d < bestDist) {
+          bestDist = d;
+          bestCoord = coord;
+          bestType = primaryType;
+        }
+      }
+
+      if (!bestCoord) {
+        for (const [, coord] of fallbackSet) {
+          const d = HexGrid.distance(facility.coord, coord);
+          if (d <= 2 && d < bestDist) {
+            bestDist = d;
+            bestCoord = coord;
+            bestType = fallbackType;
+          }
+        }
+      }
+
+      if (bestCoord) {
+        this.state.accessRamps.push({
+          facilityCoord: facility.coord,
+          routeHexCoord: bestCoord,
+          routeType: bestType,
+        });
+      }
     }
   }
 
