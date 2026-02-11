@@ -54,10 +54,20 @@ describe('MapGenerator', () => {
       expect(map.railways.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('has settlements placed', () => {
+    it('has urban clusters placed', () => {
       const map = MapGenerator.generate(params);
-      const settlements = [...map.cells.values()].filter((c) => c.settlement !== null);
-      expect(settlements.length).toBeGreaterThan(0);
+      expect(map.urbanClusters.length).toBeGreaterThan(0);
+    });
+
+    it('has supply hubs placed', () => {
+      const map = MapGenerator.generate(params);
+      expect(map.supplyHubs.length).toBeGreaterThan(0);
+    });
+
+    it('has Urban terrain cells', () => {
+      const map = MapGenerator.generate(params);
+      const urbanCells = [...map.cells.values()].filter((c) => c.terrain === TerrainType.Urban);
+      expect(urbanCells.length).toBeGreaterThan(0);
     });
 
     it('is deterministic', () => {
@@ -65,10 +75,12 @@ describe('MapGenerator', () => {
       const b = MapGenerator.generate(params);
       expect(a.cells.size).toBe(b.cells.size);
       expect(a.roads.length).toBe(b.roads.length);
+      expect(a.urbanClusters.length).toBe(b.urbanClusters.length);
+      expect(a.supplyHubs.length).toBe(b.supplyHubs.length);
       for (const [key, cellA] of a.cells) {
         const cellB = b.cells.get(key)!;
         expect(cellA.terrain).toBe(cellB.terrain);
-        expect(cellA.settlement).toBe(cellB.settlement);
+        expect(cellA.urbanClusterId).toBe(cellB.urbanClusterId);
       }
     });
 
