@@ -114,8 +114,7 @@ export interface RoadParams {
   riverCost: number;
   urbanCost: number;
   cityConnectionDistance: number;
-  roadReuseCost: number;
-  railwayReuseCost: number;
+  railwayRedundancy: number;
 }
 
 export interface GenerationParams {
@@ -186,7 +185,6 @@ export const DEFAULT_GENERATION_PARAMS: GenerationParams = {
     riverCost: 6,
     urbanCost: 1,
     cityConnectionDistance: 20,
-    roadReuseCost: 0.1,
-    railwayReuseCost: 0.1,
+    railwayRedundancy: 2,
   },
 };

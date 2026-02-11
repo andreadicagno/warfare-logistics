@@ -113,7 +113,7 @@ describe('RoadGenerator', () => {
       expect(railways.length).toBe(0);
     });
 
-    it('produces some railways with infrastructure=basic', () => {
+    it('produces MST trunk railways with infrastructure=basic', () => {
       const { cells, clusters } = makeMap();
       const { railways } = RoadGenerator.generate(
         cells,
@@ -122,20 +122,22 @@ describe('RoadGenerator', () => {
         roadParamsWithInfra('basic'),
         clusters,
       );
+      // MST produces N-1 edges for N major centers — should have at least 1 railway segment
       expect(railways.length).toBeGreaterThanOrEqual(1);
-      expect(railways.length).toBeLessThanOrEqual(2);
     });
 
-    it('produces railways between major centers with infrastructure=developed', () => {
+    it('produces more railways with infrastructure=developed than basic', () => {
       const { cells, clusters } = makeMap();
-      const { railways } = RoadGenerator.generate(
+      const basic = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('basic'), clusters);
+      const developed = RoadGenerator.generate(
         cells,
         40,
         30,
         roadParamsWithInfra('developed'),
         clusters,
       );
-      expect(railways.length).toBeGreaterThanOrEqual(2);
+      // Developed adds redundancy edges + town branches on top of MST
+      expect(developed.railways.length).toBeGreaterThanOrEqual(basic.railways.length);
     });
 
     it('all railways have type railway', () => {
@@ -175,9 +177,6 @@ describe('RoadGenerator', () => {
         3,
         3,
         defaultTerrainCost,
-        new Map(),
-        'road',
-        defaultRoadParams,
       );
       expect(path).not.toBeNull();
       expect(path![0]).toEqual({ q: 0, r: 0 });
@@ -216,11 +215,44 @@ describe('RoadGenerator', () => {
         5,
         5,
         defaultTerrainCost,
-        new Map(),
-        'road',
-        defaultRoadParams,
       );
       expect(path).toBeNull();
+    });
+
+    it('prefers reusing existing edges when multiplier is provided', () => {
+      const cells = new Map<string, HexCell>();
+      for (let q = 0; q < 5; q++) {
+        for (let r = 0; r < 5; r++) {
+          const coord = { q, r };
+          cells.set(HexGrid.key(coord), {
+            coord,
+            terrain: TerrainType.Plains,
+            elevation: 0.4,
+            moisture: 0.3,
+            urbanClusterId: null,
+          });
+        }
+      }
+
+      // Mark some edges as existing
+      const existingEdges = new Set<string>();
+      const edgeKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+      existingEdges.add(edgeKey(HexGrid.key({ q: 0, r: 0 }), HexGrid.key({ q: 1, r: 0 })));
+      existingEdges.add(edgeKey(HexGrid.key({ q: 1, r: 0 }), HexGrid.key({ q: 2, r: 0 })));
+
+      const pathWithReuse = RoadGenerator.astar(
+        { q: 0, r: 0 },
+        { q: 2, r: 0 },
+        cells,
+        5,
+        5,
+        defaultTerrainCost,
+        existingEdges,
+        0.1,
+      );
+      expect(pathWithReuse).not.toBeNull();
+      expect(pathWithReuse![0]).toEqual({ q: 0, r: 0 });
+      expect(pathWithReuse![pathWithReuse!.length - 1]).toEqual({ q: 2, r: 0 });
     });
   });
 });

@@ -2,6 +2,55 @@ import { HexGrid } from './HexGrid';
 import type { HexCell, HexCoord, RoadParams, RoutePath, UrbanCluster } from './types';
 import { TerrainType } from './types';
 
+// ---------------------------------------------------------------------------
+// Union-Find with path compression + union by rank
+// ---------------------------------------------------------------------------
+
+class UnionFind {
+  private parent: number[];
+  private rank: number[];
+
+  constructor(n: number) {
+    this.parent = Array.from({ length: n }, (_, i) => i);
+    this.rank = new Array(n).fill(0);
+  }
+
+  find(x: number): number {
+    if (this.parent[x] !== x) this.parent[x] = this.find(this.parent[x]);
+    return this.parent[x];
+  }
+
+  union(a: number, b: number): boolean {
+    const ra = this.find(a);
+    const rb = this.find(b);
+    if (ra === rb) return false;
+    if (this.rank[ra] < this.rank[rb]) {
+      this.parent[ra] = rb;
+    } else if (this.rank[ra] > this.rank[rb]) {
+      this.parent[rb] = ra;
+    } else {
+      this.parent[rb] = ra;
+      this.rank[ra]++;
+    }
+    return true;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cached pairwise A* result
+// ---------------------------------------------------------------------------
+
+interface PairwiseRoute {
+  from: number;
+  to: number;
+  cost: number;
+  path: HexCoord[];
+}
+
+// ---------------------------------------------------------------------------
+// RoadGenerator — MST-based network construction
+// ---------------------------------------------------------------------------
+
 export class RoadGenerator {
   static generate(
     cells: Map<string, HexCell>,
@@ -10,123 +59,45 @@ export class RoadGenerator {
     params: RoadParams,
     urbanClusters: UrbanCluster[],
   ): { roads: RoutePath[]; railways: RoutePath[] } {
-    const terrainCost: Record<TerrainType, number> = {
-      [TerrainType.Plains]: params.plainsCost,
-      [TerrainType.Forest]: params.forestCost,
-      [TerrainType.Hills]: params.hillsCost,
-      [TerrainType.Marsh]: params.marshCost,
-      [TerrainType.River]: params.riverCost,
-      [TerrainType.Urban]: params.urbanCost,
-      [TerrainType.Mountain]: Infinity,
-      [TerrainType.Water]: Infinity,
-    };
+    const terrainCost = RoadGenerator.buildTerrainCost(params);
 
     const majorCenters = urbanClusters
       .filter((c) => c.tier === 'metropolis' || c.tier === 'city')
       .map((c) => c.center);
-    const minorCenters = urbanClusters.filter((c) => c.tier === 'town').map((c) => c.center);
+    const towns = urbanClusters.filter((c) => c.tier === 'town').map((c) => c.center);
 
-    const roads: RoutePath[] = [];
-    const usedPairs = new Set<string>();
-    const existingEdges = new Map<string, 'road' | 'railway'>();
+    // --- Pairwise A* between all major center pairs ---
+    const pairwiseRoutes = RoadGenerator.computePairwiseRoutes(
+      majorCenters,
+      cells,
+      width,
+      height,
+      terrainCost,
+    );
 
-    // Connect each minor center to nearest major center
-    for (const town of minorCenters) {
-      let nearestCity: HexCoord | null = null;
-      let nearestDist = Infinity;
-      for (const city of majorCenters) {
-        const dist = HexGrid.distance(town, city);
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearestCity = city;
-        }
-      }
-      if (nearestCity) {
-        const pairKey = RoadGenerator.pairKey(town, nearestCity);
-        if (!usedPairs.has(pairKey)) {
-          const path = RoadGenerator.astar(
-            town,
-            nearestCity,
-            cells,
-            width,
-            height,
-            terrainCost,
-            existingEdges,
-            'road',
-            params,
-          );
-          if (path) {
-            roads.push({ hexes: path, type: 'road' });
-            usedPairs.add(pairKey);
-            RoadGenerator.addPathEdges(path, existingEdges, 'road');
-          }
-        }
-      }
-    }
+    // --- Railways ---
+    const railways = RoadGenerator.buildRailways(
+      majorCenters,
+      towns,
+      pairwiseRoutes,
+      params,
+      cells,
+      width,
+      height,
+      terrainCost,
+    );
 
-    // Connect major centers to each other if within range
-    for (let i = 0; i < majorCenters.length; i++) {
-      for (let j = i + 1; j < majorCenters.length; j++) {
-        if (HexGrid.distance(majorCenters[i], majorCenters[j]) <= params.cityConnectionDistance) {
-          const pairKey = RoadGenerator.pairKey(majorCenters[i], majorCenters[j]);
-          if (!usedPairs.has(pairKey)) {
-            const path = RoadGenerator.astar(
-              majorCenters[i],
-              majorCenters[j],
-              cells,
-              width,
-              height,
-              terrainCost,
-              existingEdges,
-              'road',
-              params,
-            );
-            if (path) {
-              roads.push({ hexes: path, type: 'road' });
-              usedPairs.add(pairKey);
-              RoadGenerator.addPathEdges(path, existingEdges, 'road');
-            }
-          }
-        }
-      }
-    }
-
-    // Railways between major centers
-    const railways: RoutePath[] = [];
-    if (params.infrastructure !== 'none') {
-      const cityPairs: Array<{ from: HexCoord; to: HexCoord; dist: number }> = [];
-      for (let i = 0; i < majorCenters.length; i++) {
-        for (let j = i + 1; j < majorCenters.length; j++) {
-          cityPairs.push({
-            from: majorCenters[i],
-            to: majorCenters[j],
-            dist: HexGrid.distance(majorCenters[i], majorCenters[j]),
-          });
-        }
-      }
-      cityPairs.sort((a, b) => a.dist - b.dist);
-
-      const railCount =
-        params.infrastructure === 'basic' ? Math.min(2, cityPairs.length) : cityPairs.length;
-
-      for (let i = 0; i < railCount; i++) {
-        const path = RoadGenerator.astar(
-          cityPairs[i].from,
-          cityPairs[i].to,
-          cells,
-          width,
-          height,
-          terrainCost,
-          existingEdges,
-          'railway',
-          params,
-        );
-        if (path) {
-          railways.push({ hexes: path, type: 'railway' });
-          RoadGenerator.addPathEdges(path, existingEdges, 'railway');
-        }
-      }
-    }
+    // --- Roads ---
+    const roads = RoadGenerator.buildRoads(
+      majorCenters,
+      towns,
+      pairwiseRoutes,
+      params,
+      cells,
+      width,
+      height,
+      terrainCost,
+    );
 
     return {
       roads: RoadGenerator.mergePathsIntoNetwork(roads.map((r) => r.hexes)).map((hexes) => ({
@@ -140,84 +111,350 @@ export class RoadGenerator {
     };
   }
 
-  /**
-   * Merge overlapping paths into a deduplicated road network.
-   * Collects all unique hex-to-hex edges, then traces polylines
-   * splitting at junctions (degree != 2) and dead ends.
-   */
-  private static mergePathsIntoNetwork(paths: HexCoord[][]): HexCoord[][] {
-    if (paths.length === 0) return [];
+  // ---------------------------------------------------------------------------
+  // Railway construction: MST trunk + redundancy + town branches
+  // ---------------------------------------------------------------------------
 
-    const adj = new Map<string, Set<string>>();
-    const coordOf = new Map<string, HexCoord>();
+  private static buildRailways(
+    majorCenters: HexCoord[],
+    towns: HexCoord[],
+    pairwiseRoutes: PairwiseRoute[],
+    params: RoadParams,
+    cells: Map<string, HexCell>,
+    width: number,
+    height: number,
+    terrainCost: Record<TerrainType, number>,
+  ): RoutePath[] {
+    if (params.infrastructure === 'none' || majorCenters.length < 2) return [];
 
-    const ensureNode = (key: string) => {
-      if (!adj.has(key)) adj.set(key, new Set());
-    };
+    // Step 1: MST trunk lines (Kruskal's)
+    const mstEdges = RoadGenerator.buildMST(pairwiseRoutes, majorCenters.length);
+    const railways: RoutePath[] = [];
 
-    for (const path of paths) {
-      for (let i = 0; i < path.length; i++) {
-        const key = HexGrid.key(path[i]);
-        coordOf.set(key, path[i]);
-        ensureNode(key);
-        if (i > 0) {
-          const prevKey = HexGrid.key(path[i - 1]);
-          adj.get(prevKey)!.add(key);
-          adj.get(key)!.add(prevKey);
-        }
+    for (const edge of mstEdges) {
+      railways.push({ hexes: edge.path, type: 'railway' });
+    }
+
+    if (params.infrastructure === 'basic') return railways;
+
+    // Step 2: Redundancy edges (cheapest non-MST edges)
+    const mstSet = new Set(mstEdges.map((e) => `${e.from}-${e.to}`));
+    const nonMstEdges = pairwiseRoutes
+      .filter((r) => !mstSet.has(`${r.from}-${r.to}`))
+      .sort((a, b) => a.cost - b.cost);
+
+    const redundancyCount = Math.min(params.railwayRedundancy, nonMstEdges.length);
+    for (let i = 0; i < redundancyCount; i++) {
+      railways.push({ hexes: nonMstEdges[i].path, type: 'railway' });
+    }
+
+    // Step 3: Branch lines — connect each town to nearest hex on railway network
+    const networkHexes = RoadGenerator.collectNetworkHexes(railways);
+    for (const town of towns) {
+      const nearest = RoadGenerator.findNearestNetworkHex(town, networkHexes);
+      if (!nearest) continue;
+      if (HexGrid.key(town) === HexGrid.key(nearest)) continue;
+
+      const path = RoadGenerator.astar(town, nearest, cells, width, height, terrainCost);
+      if (path) {
+        railways.push({ hexes: path, type: 'railway' });
+        // Expand network with new branch for subsequent towns
+        for (const hex of path) networkHexes.set(HexGrid.key(hex), hex);
       }
     }
 
-    const visitedEdges = new Set<string>();
-    const edgeKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
-    const result: HexCoord[][] = [];
-
-    // Start tracing from junctions (degree != 2) and dead ends
-    const startNodes: string[] = [];
-    for (const [node, neighbors] of adj) {
-      if (neighbors.size !== 2) startNodes.push(node);
-    }
-
-    // Handle pure loops (all degree 2) — pick any node
-    if (startNodes.length === 0 && adj.size > 0) {
-      startNodes.push(adj.keys().next().value!);
-    }
-
-    for (const start of startNodes) {
-      for (const next of adj.get(start)!) {
-        const ek = edgeKey(start, next);
-        if (visitedEdges.has(ek)) continue;
-
-        const polyline: HexCoord[] = [coordOf.get(start)!];
-        let prev = start;
-        let curr = next;
-
-        while (true) {
-          visitedEdges.add(edgeKey(prev, curr));
-          polyline.push(coordOf.get(curr)!);
-
-          const neighbors = adj.get(curr)!;
-          if (neighbors.size !== 2) break; // junction or dead end
-
-          let nextNode: string | null = null;
-          for (const n of neighbors) {
-            if (n !== prev) {
-              nextNode = n;
-              break;
-            }
-          }
-          if (!nextNode || visitedEdges.has(edgeKey(curr, nextNode))) break;
-
-          prev = curr;
-          curr = nextNode;
-        }
-
-        if (polyline.length >= 2) result.push(polyline);
-      }
-    }
-
-    return result;
+    return railways;
   }
+
+  // ---------------------------------------------------------------------------
+  // Road construction: MST primary + secondary highways + town connections
+  // ---------------------------------------------------------------------------
+
+  private static buildRoads(
+    majorCenters: HexCoord[],
+    towns: HexCoord[],
+    pairwiseRoutes: PairwiseRoute[],
+    params: RoadParams,
+    cells: Map<string, HexCell>,
+    width: number,
+    height: number,
+    terrainCost: Record<TerrainType, number>,
+  ): RoutePath[] {
+    if (majorCenters.length < 2) {
+      // If fewer than 2 major centers, just connect towns to whatever exists
+      return RoadGenerator.connectTownsToNetwork(
+        towns,
+        majorCenters,
+        new Map(),
+        cells,
+        width,
+        height,
+        terrainCost,
+      );
+    }
+
+    const roads: RoutePath[] = [];
+
+    // Step 1: Primary highways (MST)
+    const mstEdges = RoadGenerator.buildMST(pairwiseRoutes, majorCenters.length);
+    const existingEdges = new Set<string>();
+
+    for (const edge of mstEdges) {
+      roads.push({ hexes: edge.path, type: 'road' });
+      RoadGenerator.addPathToEdgeSet(edge.path, existingEdges);
+    }
+
+    // Step 2: Secondary highways — add direct roads where MST detour > 1.5x direct cost
+    const mstSet = new Set(mstEdges.map((e) => `${e.from}-${e.to}`));
+
+    // Build MST adjacency for shortest-path-in-MST computation
+    const mstAdj = new Map<number, Map<number, number>>();
+    for (const edge of mstEdges) {
+      if (!mstAdj.has(edge.from)) mstAdj.set(edge.from, new Map());
+      if (!mstAdj.has(edge.to)) mstAdj.set(edge.to, new Map());
+      mstAdj.get(edge.from)!.set(edge.to, edge.cost);
+      mstAdj.get(edge.to)!.set(edge.from, edge.cost);
+    }
+
+    for (const route of pairwiseRoutes) {
+      if (mstSet.has(`${route.from}-${route.to}`)) continue;
+      // Only consider pairs within connection distance
+      if (
+        HexGrid.distance(majorCenters[route.from], majorCenters[route.to]) >
+        params.cityConnectionDistance
+      )
+        continue;
+
+      const mstDist = RoadGenerator.dijkstraMSTDist(
+        route.from,
+        route.to,
+        mstAdj,
+        majorCenters.length,
+      );
+      if (mstDist > route.cost * 1.5) {
+        // Route via A* with existing edges as cheap, encouraging corridor sharing
+        const path = RoadGenerator.astar(
+          majorCenters[route.from],
+          majorCenters[route.to],
+          cells,
+          width,
+          height,
+          terrainCost,
+          existingEdges,
+          0.1,
+        );
+        if (path) {
+          roads.push({ hexes: path, type: 'road' });
+          RoadGenerator.addPathToEdgeSet(path, existingEdges);
+        }
+      }
+    }
+
+    // Step 3: Town connections
+    const networkHexes = RoadGenerator.collectNetworkHexes(roads);
+    const townRoads = RoadGenerator.connectTownsToNetwork(
+      towns,
+      majorCenters,
+      networkHexes,
+      cells,
+      width,
+      height,
+      terrainCost,
+    );
+    roads.push(...townRoads);
+
+    return roads;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Connect towns to existing network
+  // ---------------------------------------------------------------------------
+
+  private static connectTownsToNetwork(
+    towns: HexCoord[],
+    majorCenters: HexCoord[],
+    networkHexes: Map<string, HexCoord>,
+    cells: Map<string, HexCell>,
+    width: number,
+    height: number,
+    terrainCost: Record<TerrainType, number>,
+  ): RoutePath[] {
+    const roads: RoutePath[] = [];
+
+    // If no network yet, connect to nearest major center directly
+    if (networkHexes.size === 0) {
+      for (const town of towns) {
+        let nearest: HexCoord | null = null;
+        let bestDist = Infinity;
+        for (const center of majorCenters) {
+          const d = HexGrid.distance(town, center);
+          if (d < bestDist) {
+            bestDist = d;
+            nearest = center;
+          }
+        }
+        if (nearest) {
+          const path = RoadGenerator.astar(town, nearest, cells, width, height, terrainCost);
+          if (path) {
+            roads.push({ hexes: path, type: 'road' });
+            for (const hex of path) networkHexes.set(HexGrid.key(hex), hex);
+          }
+        }
+      }
+      return roads;
+    }
+
+    for (const town of towns) {
+      const nearest = RoadGenerator.findNearestNetworkHex(town, networkHexes);
+      if (!nearest) continue;
+      if (HexGrid.key(town) === HexGrid.key(nearest)) continue;
+
+      const path = RoadGenerator.astar(town, nearest, cells, width, height, terrainCost);
+      if (path) {
+        roads.push({ hexes: path, type: 'road' });
+        for (const hex of path) networkHexes.set(HexGrid.key(hex), hex);
+      }
+    }
+
+    return roads;
+  }
+
+  // ---------------------------------------------------------------------------
+  // MST construction (Kruskal's)
+  // ---------------------------------------------------------------------------
+
+  private static buildMST(routes: PairwiseRoute[], nodeCount: number): PairwiseRoute[] {
+    const sorted = [...routes].sort((a, b) => a.cost - b.cost);
+    const uf = new UnionFind(nodeCount);
+    const mst: PairwiseRoute[] = [];
+
+    for (const route of sorted) {
+      if (uf.union(route.from, route.to)) {
+        mst.push(route);
+        if (mst.length === nodeCount - 1) break;
+      }
+    }
+
+    return mst;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pairwise A* between all major center pairs
+  // ---------------------------------------------------------------------------
+
+  private static computePairwiseRoutes(
+    centers: HexCoord[],
+    cells: Map<string, HexCell>,
+    width: number,
+    height: number,
+    terrainCost: Record<TerrainType, number>,
+  ): PairwiseRoute[] {
+    const routes: PairwiseRoute[] = [];
+
+    for (let i = 0; i < centers.length; i++) {
+      for (let j = i + 1; j < centers.length; j++) {
+        const path = RoadGenerator.astar(centers[i], centers[j], cells, width, height, terrainCost);
+        if (path) {
+          routes.push({
+            from: i,
+            to: j,
+            cost: RoadGenerator.pathCost(path, cells, terrainCost),
+            path,
+          });
+        }
+      }
+    }
+
+    return routes;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Path cost calculation
+  // ---------------------------------------------------------------------------
+
+  private static pathCost(
+    path: HexCoord[],
+    cells: Map<string, HexCell>,
+    terrainCost: Record<TerrainType, number>,
+  ): number {
+    let total = 0;
+    for (let i = 1; i < path.length; i++) {
+      const cell = cells.get(HexGrid.key(path[i]));
+      if (cell) total += terrainCost[cell.terrain];
+    }
+    return total;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shortest path through MST graph (Dijkstra on abstract MST adjacency)
+  // ---------------------------------------------------------------------------
+
+  private static dijkstraMSTDist(
+    from: number,
+    to: number,
+    adj: Map<number, Map<number, number>>,
+    nodeCount: number,
+  ): number {
+    const dist = new Array(nodeCount).fill(Infinity);
+    dist[from] = 0;
+    const visited = new Set<number>();
+    const heap = new MinHeap();
+    heap.push(String(from), 0);
+
+    while (heap.size > 0) {
+      const key = heap.pop()!;
+      const node = Number(key);
+      if (node === to) return dist[to];
+      if (visited.has(node)) continue;
+      visited.add(node);
+
+      const neighbors = adj.get(node);
+      if (!neighbors) continue;
+      for (const [neighbor, cost] of neighbors) {
+        const newDist = dist[node] + cost;
+        if (newDist < dist[neighbor]) {
+          dist[neighbor] = newDist;
+          heap.push(String(neighbor), newDist);
+        }
+      }
+    }
+
+    return dist[to];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Network hex collection and nearest-hex lookup
+  // ---------------------------------------------------------------------------
+
+  private static collectNetworkHexes(routes: RoutePath[]): Map<string, HexCoord> {
+    const hexes = new Map<string, HexCoord>();
+    for (const route of routes) {
+      for (const hex of route.hexes) {
+        hexes.set(HexGrid.key(hex), hex);
+      }
+    }
+    return hexes;
+  }
+
+  private static findNearestNetworkHex(
+    target: HexCoord,
+    network: Map<string, HexCoord>,
+  ): HexCoord | null {
+    let best: HexCoord | null = null;
+    let bestDist = Infinity;
+    for (const hex of network.values()) {
+      const d = HexGrid.distance(target, hex);
+      if (d < bestDist) {
+        bestDist = d;
+        best = hex;
+      }
+    }
+    return best;
+  }
+
+  // ---------------------------------------------------------------------------
+  // A* pathfinding (simplified signature)
+  // ---------------------------------------------------------------------------
 
   static astar(
     start: HexCoord,
@@ -226,9 +463,8 @@ export class RoadGenerator {
     width: number,
     height: number,
     terrainCost: Record<TerrainType, number>,
-    existingEdges: Map<string, 'road' | 'railway'>,
-    routeType: 'road' | 'railway',
-    params: RoadParams,
+    existingEdges?: Set<string>,
+    reuseCostMultiplier?: number,
   ): HexCoord[] | null {
     const startKey = HexGrid.key(start);
     const goalKey = HexGrid.key(goal);
@@ -265,15 +501,14 @@ export class RoadGenerator {
         const baseCost = terrainCost[neighborCell.terrain];
         if (!Number.isFinite(baseCost)) continue;
 
-        // Prefer reusing existing routes of the same type — much cheaper than building new
-        const ek = RoadGenerator.edgeKey(currentKey, neighborKey);
-        const edgeType = existingEdges.get(ek);
-        const cost =
-          edgeType !== undefined && edgeType === routeType
-            ? routeType === 'road'
-              ? params.roadReuseCost
-              : params.railwayReuseCost
-            : baseCost;
+        // Prefer reusing existing edges if provided
+        let cost = baseCost;
+        if (existingEdges && reuseCostMultiplier !== undefined) {
+          const ek = RoadGenerator.edgeKey(currentKey, neighborKey);
+          if (existingEdges.has(ek)) {
+            cost = baseCost * reuseCostMultiplier;
+          }
+        }
 
         const tentativeG = (gScore.get(currentKey) ?? Infinity) + cost;
 
@@ -288,6 +523,88 @@ export class RoadGenerator {
 
     return null;
   }
+
+  // ---------------------------------------------------------------------------
+  // Merge overlapping paths into a deduplicated network
+  // ---------------------------------------------------------------------------
+
+  private static mergePathsIntoNetwork(paths: HexCoord[][]): HexCoord[][] {
+    if (paths.length === 0) return [];
+
+    const adj = new Map<string, Set<string>>();
+    const coordOf = new Map<string, HexCoord>();
+
+    const ensureNode = (key: string) => {
+      if (!adj.has(key)) adj.set(key, new Set());
+    };
+
+    for (const path of paths) {
+      for (let i = 0; i < path.length; i++) {
+        const key = HexGrid.key(path[i]);
+        coordOf.set(key, path[i]);
+        ensureNode(key);
+        if (i > 0) {
+          const prevKey = HexGrid.key(path[i - 1]);
+          adj.get(prevKey)!.add(key);
+          adj.get(key)!.add(prevKey);
+        }
+      }
+    }
+
+    const visitedEdges = new Set<string>();
+    const ek = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+    const result: HexCoord[][] = [];
+
+    // Start tracing from junctions (degree != 2) and dead ends
+    const startNodes: string[] = [];
+    for (const [node, neighbors] of adj) {
+      if (neighbors.size !== 2) startNodes.push(node);
+    }
+
+    // Handle pure loops (all degree 2) — pick any node
+    if (startNodes.length === 0 && adj.size > 0) {
+      startNodes.push(adj.keys().next().value!);
+    }
+
+    for (const start of startNodes) {
+      for (const next of adj.get(start)!) {
+        const edgeId = ek(start, next);
+        if (visitedEdges.has(edgeId)) continue;
+
+        const polyline: HexCoord[] = [coordOf.get(start)!];
+        let prev = start;
+        let curr = next;
+
+        while (true) {
+          visitedEdges.add(ek(prev, curr));
+          polyline.push(coordOf.get(curr)!);
+
+          const neighbors = adj.get(curr)!;
+          if (neighbors.size !== 2) break; // junction or dead end
+
+          let nextNode: string | null = null;
+          for (const n of neighbors) {
+            if (n !== prev) {
+              nextNode = n;
+              break;
+            }
+          }
+          if (!nextNode || visitedEdges.has(ek(curr, nextNode))) break;
+
+          prev = curr;
+          curr = nextNode;
+        }
+
+        if (polyline.length >= 2) result.push(polyline);
+      }
+    }
+
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
 
   private static reconstructPath(
     cameFrom: Map<string, string>,
@@ -308,20 +625,29 @@ export class RoadGenerator {
     return ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
   }
 
-  private static pairKey(a: HexCoord, b: HexCoord): string {
-    return RoadGenerator.edgeKey(HexGrid.key(a), HexGrid.key(b));
-  }
-
-  private static addPathEdges(
-    path: HexCoord[],
-    edges: Map<string, 'road' | 'railway'>,
-    routeType: 'road' | 'railway',
-  ): void {
+  private static addPathToEdgeSet(path: HexCoord[], edges: Set<string>): void {
     for (let i = 0; i < path.length - 1; i++) {
-      edges.set(RoadGenerator.edgeKey(HexGrid.key(path[i]), HexGrid.key(path[i + 1])), routeType);
+      edges.add(RoadGenerator.edgeKey(HexGrid.key(path[i]), HexGrid.key(path[i + 1])));
     }
   }
+
+  private static buildTerrainCost(params: RoadParams): Record<TerrainType, number> {
+    return {
+      [TerrainType.Plains]: params.plainsCost,
+      [TerrainType.Forest]: params.forestCost,
+      [TerrainType.Hills]: params.hillsCost,
+      [TerrainType.Marsh]: params.marshCost,
+      [TerrainType.River]: params.riverCost,
+      [TerrainType.Urban]: params.urbanCost,
+      [TerrainType.Mountain]: Infinity,
+      [TerrainType.Water]: Infinity,
+    };
+  }
 }
+
+// ---------------------------------------------------------------------------
+// MinHeap (unchanged)
+// ---------------------------------------------------------------------------
 
 class MinHeap {
   private data: Array<{ key: string; f: number }> = [];
