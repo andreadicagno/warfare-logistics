@@ -201,12 +201,7 @@ export class RouteLayer {
     }
   }
 
-  private drawBezierPath(
-    segments: BezierSegment[],
-    width: number,
-    color: number,
-    alpha = 1,
-  ): void {
+  private drawBezierPath(segments: BezierSegment[], width: number, color: number, alpha = 1): void {
     if (segments.length === 0) return;
     this.graphics.moveTo(segments[0].p0.x, segments[0].p0.y);
     for (const seg of segments) {

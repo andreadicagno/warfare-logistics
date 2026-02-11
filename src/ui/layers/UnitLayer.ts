@@ -244,5 +244,7 @@ export class UnitLayer {
 
 function averageSupply(unit: MockUnit): number {
   const s = unit.supplies;
-  return (s[ResourceType.Fuel] + s[ResourceType.Ammo] + s[ResourceType.Food] + s[ResourceType.Parts]) / 4;
+  return (
+    (s[ResourceType.Fuel] + s[ResourceType.Ammo] + s[ResourceType.Food] + s[ResourceType.Parts]) / 4
+  );
 }

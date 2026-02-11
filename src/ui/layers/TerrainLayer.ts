@@ -21,6 +21,19 @@ const BORDER_WIDTH = 0.5;
 const BORDER_DARKEN = 0.3;
 const URBAN_DENSE_BASE = 0x606060;
 const URBAN_SPARSE_BASE = 0x8a8a8a;
+const URBAN_BOUNDARY_COLOR = 0x2a2a2a;
+const URBAN_BOUNDARY_WIDTH = 1;
+
+// Maps HexGrid direction index to the vertex pair forming that edge.
+// Direction 0 (E) → edge v0-v1, Direction 1 (NE) → edge v5-v0, etc.
+const DIRECTION_TO_EDGE: [number, number][] = [
+  [0, 1], // E
+  [5, 0], // NE
+  [4, 5], // NW
+  [3, 4], // W
+  [2, 3], // SW
+  [1, 2], // SE
+];
 const NOISE_FREQUENCY = 0.15;
 const NOISE_AMPLITUDE = 0.08;
 const PATTERN_DARKEN = 0.15;
@@ -108,10 +121,16 @@ export class TerrainLayer {
       this.graphics.fill({ color: dotColor });
     }
 
-    const hasNonUrbanNeighbor = urbanNeighborCount < 6;
-    if (hasNonUrbanNeighbor) {
-      this.graphics.poly(flat);
-      this.graphics.stroke({ width: BORDER_WIDTH, color: darken(baseColor, BORDER_DARKEN) });
+    const neighbors = HexGrid.neighbors(cell.coord);
+    const verts = HexRenderer.vertices(px.x, px.y);
+    for (let d = 0; d < 6; d++) {
+      const neighbor = this.gameMap.cells.get(HexGrid.key(neighbors[d]));
+      if (!neighbor || neighbor.terrain !== TerrainType.Urban) {
+        const [vi, vj] = DIRECTION_TO_EDGE[d];
+        this.graphics.moveTo(verts[vi].x, verts[vi].y);
+        this.graphics.lineTo(verts[vj].x, verts[vj].y);
+        this.graphics.stroke({ width: URBAN_BOUNDARY_WIDTH, color: URBAN_BOUNDARY_COLOR });
+      }
     }
   }
 
