@@ -56,7 +56,7 @@ export class DebugOverlay {
         `Navigable: ${c.navigable ? 'yes' : 'no'}`,
         `Road: ${info.hasRoad ? 'yes' : 'no'}`,
         `Railway: ${info.hasRailway ? 'yes' : 'no'}`,
-        `Settlement: ${c.settlement ?? 'none'}`,
+        `Urban: ${c.urbanClusterId ?? 'none'}`,
       );
     } else if (info.cursorHex) {
       lines.push('', 'Cell Info: —');
