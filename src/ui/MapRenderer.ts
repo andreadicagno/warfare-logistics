@@ -8,6 +8,8 @@ import { SelectionLayer } from './layers/SelectionLayer';
 import { SupplyHubLayer } from './layers/SupplyHubLayer';
 import { TerrainLayer } from './layers/TerrainLayer';
 
+export type LayerName = 'terrain' | 'routes' | 'supplyHubs' | 'selection';
+
 export class MapRenderer {
   private app: Application;
   private gameMap: GameMap;
@@ -18,6 +20,7 @@ export class MapRenderer {
   private supplyHubLayer: SupplyHubLayer;
   private selectionLayer: SelectionLayer;
   private boundOnFrame: () => void;
+  private disabledLayers = new Set<LayerName>();
 
   constructor(app: Application, gameMap: GameMap) {
     this.app = app;
@@ -105,6 +108,51 @@ export class MapRenderer {
     return hex;
   }
 
+  setLayerVisible(layer: LayerName, visible: boolean): void {
+    const container = this.layerContainer(layer);
+    if (!container) return;
+    container.visible = visible;
+    if (visible) {
+      this.disabledLayers.delete(layer);
+      // Rebuild immediately so it's up to date
+      const bounds = this.camera.getVisibleBounds();
+      this.buildLayer(layer, bounds);
+    } else {
+      this.disabledLayers.add(layer);
+    }
+  }
+
+  private layerContainer(layer: LayerName): Container | null {
+    switch (layer) {
+      case 'terrain':
+        return this.terrainLayer.container;
+      case 'routes':
+        return this.routeLayer.container;
+      case 'supplyHubs':
+        return this.supplyHubLayer.container;
+      case 'selection':
+        return this.selectionLayer.container;
+    }
+  }
+
+  private buildLayer(
+    layer: LayerName,
+    bounds: { minX: number; minY: number; maxX: number; maxY: number },
+  ): void {
+    switch (layer) {
+      case 'terrain':
+        this.terrainLayer.build(bounds);
+        break;
+      case 'routes':
+        this.routeLayer.build(bounds);
+        break;
+      case 'supplyHubs':
+        this.supplyHubLayer.build(bounds);
+        break;
+      // selection doesn't have build()
+    }
+  }
+
   destroy(): void {
     this.app.ticker.remove(this.boundOnFrame);
     this.app.stage.off('pointermove', this.onPointerMove);
@@ -125,10 +173,7 @@ export class MapRenderer {
   private onFrame(): void {
     if (!this.camera.isDirty) return;
     this.camera.clearDirty();
-
-    const bounds = this.camera.getVisibleBounds();
-    this.terrainLayer.build(bounds);
-    this.routeLayer.build(bounds);
-    this.supplyHubLayer.build(bounds);
+    // All layers build once and cache their geometry.
+    // PixiJS handles viewport clipping on the GPU.
   }
 }

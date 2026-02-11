@@ -2,6 +2,7 @@
 import { MAP_SIZE_PRESETS } from '@core/map/MapGenerator';
 import type { GenerationParams, SeaSides } from '@core/map/types';
 import { DEFAULT_GENERATION_PARAMS } from '@core/map/types';
+import type { LayerName } from './MapRenderer';
 import {
   BUILT_IN_PRESETS,
   deleteCustomPreset,
@@ -37,6 +38,7 @@ export class Sidebar {
   private toggleBtn: HTMLButtonElement;
   private collapsed = false;
   private onGenerate: (params: GenerationParams) => void;
+  private onLayerToggle: ((layer: LayerName, visible: boolean) => void) | null = null;
 
   // Preset controls
   private presetSelect!: HTMLSelectElement;
@@ -194,6 +196,7 @@ export class Sidebar {
       overflowX: 'hidden',
     });
 
+    this.buildLayersSection(scrollArea);
     this.buildPresetsSection(scrollArea);
     this.buildMapSizeSection(scrollArea);
     this.buildCoastlineSection(scrollArea);
@@ -344,6 +347,10 @@ export class Sidebar {
     this.detectPreset();
   }
 
+  setOnLayerToggle(cb: (layer: LayerName, visible: boolean) => void): void {
+    this.onLayerToggle = cb;
+  }
+
   destroy(): void {
     this.wrapper.remove();
   }
@@ -351,6 +358,49 @@ export class Sidebar {
   // ---------------------------------------------------------------------------
   // Section builders
   // ---------------------------------------------------------------------------
+
+  private buildLayersSection(parent: HTMLElement): void {
+    const { content } = this.createSection('Layers', parent, true);
+
+    const layers: { key: LayerName; label: string }[] = [
+      { key: 'terrain', label: 'Terrain' },
+      { key: 'routes', label: 'Routes' },
+      { key: 'supplyHubs', label: 'Supply Hubs' },
+      { key: 'selection', label: 'Selection' },
+    ];
+
+    for (const { key, label } of layers) {
+      const row = document.createElement('label');
+      Object.assign(row.style, {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '3px 0',
+        cursor: 'pointer',
+        fontSize: '12px',
+      });
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = true;
+      Object.assign(checkbox.style, {
+        accentColor: '#4a7a9a',
+        cursor: 'pointer',
+        margin: '0',
+      });
+
+      checkbox.addEventListener('change', () => {
+        this.onLayerToggle?.(key, checkbox.checked);
+      });
+
+      const text = document.createElement('span');
+      text.textContent = label;
+
+      row.appendChild(checkbox);
+      row.appendChild(text);
+      content.appendChild(row);
+    }
+  }
 
   private buildPresetsSection(parent: HTMLElement): void {
     const { content } = this.createSection('Presets', parent, true);

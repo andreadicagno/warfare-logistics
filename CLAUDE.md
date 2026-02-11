@@ -45,6 +45,17 @@ bun run check      # Run ALL quality gates (lint + typecheck + test)
 - Pre-commit hook runs `biome check` + `tsc --noEmit` automatically (via lefthook)
 - Config files: `biome.json`, `vitest.config.ts`, `lefthook.yml`
 
+## Development Principles
+
+- Prefer elegant, well-crafted solutions — invest in clean design and proper abstractions
+- Write modular code: small functions, single responsibility, clear interfaces
+- Favor composition over inheritance
+- Keep modules loosely coupled — depend on interfaces/types, not concrete implementations
+- Name things precisely — code should read like prose
+- Extract shared logic only when used in 3+ places; premature abstraction is worse than duplication
+- Every module should be independently testable
+- Pure functions where possible — isolate side effects at boundaries
+
 ## Code Style
 
 Enforced by Biome — do not override:
@@ -58,20 +69,40 @@ Enforced by Biome — do not override:
 
 ```
 src/
-├── main.ts              # Entry point (creates PixiJS app + Game)
-├── core/                # Simulation logic
+├── main.ts                  # Entry point (creates PixiJS app + Game)
+├── core/                    # Simulation logic (pure, no rendering)
+│   ├── index.ts             # Barrel export
 │   └── map/
-│       ├── types.ts         # HexCoord, HexCell, TerrainType, GameMap, MapConfig
-│       ├── HexGrid.ts       # Flat-top axial hex grid utilities (static class)
+│       ├── types.ts             # HexCoord, HexCell, TerrainType, GameMap, MapConfig
+│       ├── HexGrid.ts           # Flat-top axial hex grid utilities (static class)
+│       ├── MapGenerator.ts      # Orchestrates full map generation pipeline
 │       ├── TerrainGenerator.ts  # Elevation/moisture → terrain assignment
+│       ├── SmoothingPass.ts     # Post-processing terrain smoothing
 │       ├── RiverGenerator.ts    # Greedy downhill river flow
-│       └── __tests__/       # Unit tests for map module
+│       ├── RoadGenerator.ts     # Road network between settlements
+│       ├── SettlementPlacer.ts  # Town/city placement logic
+│       ├── rng.ts               # Seeded random number generator
+│       └── __tests__/           # Unit tests for map module
 ├── game/
-│   └── Game.ts          # Main game class (placeholder test screen)
-├── ui/                  # Rendering, panels, notifications (empty)
+│   ├── Game.ts              # Main game class
+│   └── index.ts             # Barrel export
+├── ui/                      # Rendering & UI layer
+│   ├── index.ts             # Barrel export
+│   ├── Camera.ts            # Pan/zoom camera system
+│   ├── MapRenderer.ts       # Orchestrates map rendering
+│   ├── HexRenderer.ts       # Hex tile rendering utilities
+│   ├── DebugOverlay.ts      # Dev debug info overlay
+│   ├── GeneratorToolbar.ts  # Map regeneration controls
+│   ├── layers/              # Composable render layers
+│   │   ├── TerrainLayer.ts
+│   │   ├── RiverLayer.ts
+│   │   ├── RouteLayer.ts
+│   │   ├── SettlementLayer.ts
+│   │   └── SelectionLayer.ts
+│   └── __tests__/           # UI unit tests
 └── data/
-    ├── types.ts         # Game-level types (resources, facilities — stubs)
-    └── types.test.ts    # Co-located test
+    ├── types.ts             # Game-level types (resources, facilities — stubs)
+    └── types.test.ts        # Co-located test
 ```
 
 ### Test Placement
@@ -93,7 +124,7 @@ Defined in both `tsconfig.json` (paths) and `vite.config.ts` (alias). Vitest inh
 
 ### Current Implementation
 
-Map generation system (hex grid → terrain → rivers). Game shell with PixiJS placeholder screen.
+Map generation pipeline (hex grid → terrain → smoothing → rivers → roads → settlements) with seeded RNG. Full rendering system with camera, composable layer architecture, debug overlay, and generator toolbar.
 
 ### Design Goals (not yet built)
 
@@ -116,6 +147,9 @@ All in `docs/plans/`:
 - `2025-02-11-map-generation-design.md` — Map generation design
 - `2025-02-11-map-generation-implementation.md` — Map generation implementation plan
 - `2025-02-11-map-visualization-design.md` — Map visualization UI design
+- `2025-02-11-map-visualization-implementation.md` — Map visualization implementation plan
+- `2025-02-11-river-lake-redesign-design.md` — River & lake system redesign
+- `2025-02-11-ui-debug-toolbar-design.md` — Debug overlay & generator toolbar design
 
 ## Research Sources
 

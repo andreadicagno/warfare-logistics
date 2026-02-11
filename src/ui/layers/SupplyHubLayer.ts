@@ -12,26 +12,20 @@ export class SupplyHubLayer {
   readonly container = new Container();
   private graphics = new Graphics();
   private gameMap: GameMap;
+  private built = false;
 
   constructor(gameMap: GameMap) {
     this.gameMap = gameMap;
     this.container.addChild(this.graphics);
   }
 
-  build(bounds: { minX: number; minY: number; maxX: number; maxY: number }): void {
+  build(_bounds: { minX: number; minY: number; maxX: number; maxY: number }): void {
+    if (this.built) return;
+    this.built = true;
     this.graphics.clear();
-
-    const margin = HexRenderer.HEX_SIZE * 2;
 
     for (const hub of this.gameMap.supplyHubs) {
       const px = HexRenderer.hexToPixel(hub.coord);
-      if (
-        px.x < bounds.minX - margin ||
-        px.x > bounds.maxX + margin ||
-        px.y < bounds.minY - margin ||
-        px.y > bounds.maxY + margin
-      )
-        continue;
 
       if (hub.size === 'large') {
         this.graphics.circle(px.x, px.y, LARGE_RADIUS);

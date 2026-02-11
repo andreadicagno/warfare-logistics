@@ -31,6 +31,9 @@ export class Game {
       this.sidebar = new Sidebar(container, this.currentParams, (params) =>
         this.onGenerate(params),
       );
+      this.sidebar.setOnLayerToggle((layer, visible) => {
+        this.mapRenderer?.setLayerVisible(layer, visible);
+      });
     }
 
     this.keyboardController = new KeyboardController(this.app);

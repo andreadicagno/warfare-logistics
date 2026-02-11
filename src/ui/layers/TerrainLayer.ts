@@ -24,27 +24,20 @@ export class TerrainLayer {
   readonly container = new Container();
   private graphics = new Graphics();
   private gameMap: GameMap;
+  private built = false;
 
   constructor(gameMap: GameMap) {
     this.gameMap = gameMap;
     this.container.addChild(this.graphics);
   }
 
-  build(bounds: { minX: number; minY: number; maxX: number; maxY: number }): void {
+  build(_bounds: { minX: number; minY: number; maxX: number; maxY: number }): void {
+    if (this.built) return;
+    this.built = true;
     this.graphics.clear();
-
-    const margin = HexRenderer.HEX_SIZE * 2;
 
     for (const cell of this.gameMap.cells.values()) {
       const px = HexRenderer.hexToPixel(cell.coord);
-      if (
-        px.x < bounds.minX - margin ||
-        px.x > bounds.maxX + margin ||
-        px.y < bounds.minY - margin ||
-        px.y > bounds.maxY + margin
-      )
-        continue;
-
       const verts = HexRenderer.vertices(px.x, px.y);
       const flat = verts.flatMap((v) => [v.x, v.y]);
 

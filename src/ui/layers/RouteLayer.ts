@@ -51,6 +51,7 @@ export class RouteLayer {
   readonly container = new Container();
   private graphics = new Graphics();
   private gameMap: GameMap;
+  private built = false;
 
   constructor(gameMap: GameMap) {
     this.gameMap = gameMap;
@@ -58,6 +59,8 @@ export class RouteLayer {
   }
 
   build(_bounds: { minX: number; minY: number; maxX: number; maxY: number }): void {
+    if (this.built) return;
+    this.built = true;
     this.graphics.clear();
     this.drawRoads();
     this.drawRailways();
