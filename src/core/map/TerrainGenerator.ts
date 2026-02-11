@@ -45,7 +45,7 @@ export class TerrainGenerator {
           terrain,
           elevation,
           moisture,
-          settlement: null,
+          urbanClusterId: null,
         });
       }
     }
