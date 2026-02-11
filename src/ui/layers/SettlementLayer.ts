@@ -1,4 +1,3 @@
-import { HexGrid } from '@core/map/HexGrid';
 import type { GameMap } from '@core/map/types';
 import { SettlementType } from '@core/map/types';
 import { Container, Graphics } from 'pixi.js';
@@ -24,33 +23,27 @@ export class SettlementLayer {
     this.graphics.clear();
 
     const margin = HexRenderer.HEX_SIZE * 2;
-    const minQ = Math.max(0, HexRenderer.pixelToHex(bounds.minX - margin, bounds.minY).q - 1);
-    const maxQ = Math.min(
-      this.gameMap.width - 1,
-      HexRenderer.pixelToHex(bounds.maxX + margin, bounds.maxY).q + 1,
-    );
-    const minR = Math.max(0, HexRenderer.pixelToHex(bounds.minX, bounds.minY - margin).r - 1);
-    const maxR = Math.min(
-      this.gameMap.height - 1,
-      HexRenderer.pixelToHex(bounds.maxX, bounds.maxY + margin).r + 1,
-    );
 
-    for (let q = minQ; q <= maxQ; q++) {
-      for (let r = minR; r <= maxR; r++) {
-        const cell = this.gameMap.cells.get(HexGrid.key({ q, r }));
-        if (!cell || cell.settlement === null) continue;
+    for (const cell of this.gameMap.cells.values()) {
+      if (cell.settlement === null) continue;
 
-        const px = HexRenderer.hexToPixel(cell.coord);
+      const px = HexRenderer.hexToPixel(cell.coord);
+      if (
+        px.x < bounds.minX - margin ||
+        px.x > bounds.maxX + margin ||
+        px.y < bounds.minY - margin ||
+        px.y > bounds.maxY + margin
+      )
+        continue;
 
-        if (cell.settlement === SettlementType.City) {
-          this.graphics.circle(px.x, px.y, CITY_RADIUS);
-          this.graphics.fill({ color: CITY_FILL });
-          this.graphics.circle(px.x, px.y, CITY_RADIUS);
-          this.graphics.stroke({ width: 2, color: CITY_BORDER });
-        } else {
-          this.graphics.circle(px.x, px.y, TOWN_RADIUS);
-          this.graphics.fill({ color: TOWN_FILL });
-        }
+      if (cell.settlement === SettlementType.City) {
+        this.graphics.circle(px.x, px.y, CITY_RADIUS);
+        this.graphics.fill({ color: CITY_FILL });
+        this.graphics.circle(px.x, px.y, CITY_RADIUS);
+        this.graphics.stroke({ width: 2, color: CITY_BORDER });
+      } else {
+        this.graphics.circle(px.x, px.y, TOWN_RADIUS);
+        this.graphics.fill({ color: TOWN_FILL });
       }
     }
   }

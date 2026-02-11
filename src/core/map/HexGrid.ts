@@ -85,7 +85,9 @@ export class HexGrid {
   }
 
   static inBounds(coord: HexCoord, width: number, height: number): boolean {
-    return coord.q >= 0 && coord.q < width && coord.r >= 0 && coord.r < height;
+    const col = coord.q;
+    const row = coord.r + Math.floor(coord.q / 2);
+    return col >= 0 && col < width && row >= 0 && row < height;
   }
 
   /** Hexes along a straight line from a to b (inclusive) using linear interpolation */

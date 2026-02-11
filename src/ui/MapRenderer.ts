@@ -48,9 +48,11 @@ export class MapRenderer {
     this.routeLayer.build(bounds);
     this.settlementLayer.build(bounds);
 
+    const centerCol = Math.floor(gameMap.width / 2);
+    const centerRow = Math.floor(gameMap.height / 2);
     const centerCoord = {
-      q: Math.floor(gameMap.width / 2),
-      r: Math.floor(gameMap.height / 2),
+      q: centerCol,
+      r: centerRow - Math.floor(centerCol / 2),
     };
     const centerPx = HexRenderer.hexToPixel(centerCoord);
     this.camera.centerOn(centerPx.x, centerPx.y);

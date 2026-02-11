@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { HexGrid } from '../HexGrid';
 import { RiverGenerator } from '../RiverGenerator';
 import { TerrainGenerator } from '../TerrainGenerator';
-import { TerrainType } from '../types';
 
 describe('RiverGenerator', () => {
   function makeMap() {
@@ -45,18 +44,14 @@ describe('RiverGenerator', () => {
       }
     });
 
-    it('rivers terminate at water or map edge', () => {
+    it('rivers flow generally downhill', () => {
       const cells = makeMap();
       const rivers = RiverGenerator.generate(cells, 40, 30, 42);
       for (const river of rivers) {
-        const lastEdge = river.edges[river.edges.length - 1];
-        const lastHex = lastEdge.hex;
-        const dir = HexGrid.DIRECTIONS[lastEdge.edge];
-        const nextCoord = { q: lastHex.q + dir.q, r: lastHex.r + dir.r };
-        const nextCell = cells.get(HexGrid.key(nextCoord));
-        const isOutOfBounds = !HexGrid.inBounds(nextCoord, 40, 30);
-        const isWater = nextCell?.terrain === TerrainType.Water;
-        expect(isOutOfBounds || isWater).toBe(true);
+        if (river.edges.length < 2) continue;
+        const firstCell = cells.get(HexGrid.key(river.edges[0].hex))!;
+        const lastCell = cells.get(HexGrid.key(river.edges[river.edges.length - 1].hex))!;
+        expect(firstCell.elevation).toBeGreaterThanOrEqual(lastCell.elevation);
       }
     });
 

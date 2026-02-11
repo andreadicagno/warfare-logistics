@@ -25,8 +25,10 @@ export class TerrainGenerator {
 
     const cells = new Map<string, HexCell>();
 
-    for (let q = 0; q < width; q++) {
-      for (let r = 0; r < height; r++) {
+    for (let col = 0; col < width; col++) {
+      for (let row = 0; row < height; row++) {
+        const q = col;
+        const r = row - Math.floor(col / 2);
         const coord: HexCoord = { q, r };
         const elevation = TerrainGenerator.sampleElevation(coord, width, height, elevationNoise);
         const moisture = TerrainGenerator.sampleMoisture(coord, moistureNoise);
@@ -61,8 +63,10 @@ export class TerrainGenerator {
       (0.3 * (noise(coord.q * scale2, coord.r * scale2) + 1)) / 2 +
       (0.1 * (noise(coord.q * scale3, coord.r * scale3) + 1)) / 2;
 
+    // Use offset row for center falloff so it's symmetric on the rectangular map
+    const row = coord.r + Math.floor(coord.q / 2);
     const cx = coord.q / width - 0.5;
-    const cy = coord.r / height - 0.5;
+    const cy = row / height - 0.5;
     const distFromCenter = Math.sqrt(cx * cx + cy * cy) * 2;
     const falloff = Math.max(0, 1 - distFromCenter * distFromCenter);
     value *= falloff;
