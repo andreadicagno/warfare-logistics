@@ -66,6 +66,10 @@ export class MapRenderer {
     this.app.ticker.add(this.boundOnFrame);
   }
 
+  get cameraRef(): Camera {
+    return this.camera;
+  }
+
   get zoom(): number {
     return this.camera.scale;
   }

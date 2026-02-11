@@ -3,6 +3,7 @@ import type { GameMap, HexCell, MapConfig } from '@core/map/types';
 import type { DebugInfo } from '@ui/DebugOverlay';
 import { DebugOverlay } from '@ui/DebugOverlay';
 import { GeneratorToolbar } from '@ui/GeneratorToolbar';
+import { KeyboardController } from '@ui/KeyboardController';
 import { MapRenderer } from '@ui/MapRenderer';
 import type { Application } from 'pixi.js';
 
@@ -20,6 +21,7 @@ export class Game {
   private mapRenderer: MapRenderer | null = null;
   private debugOverlay: DebugOverlay | null = null;
   private toolbar: GeneratorToolbar | null = null;
+  private keyboardController: KeyboardController | null = null;
   private currentConfig: MapConfig = { ...DEFAULT_CONFIG };
 
   constructor(app: Application) {
@@ -36,6 +38,9 @@ export class Game {
         this.onGenerate(config),
       );
     }
+
+    this.keyboardController = new KeyboardController(this.app);
+    this.keyboardController.attach();
 
     this.app.ticker.add(this.update.bind(this));
     this.setupControls();
@@ -71,8 +76,13 @@ export class Game {
   }
 
   private update(_ticker: { deltaTime: number }): void {
-    if (this.isPaused) return;
+    if (this.mapRenderer) {
+      this.keyboardController?.update(this.mapRenderer.cameraRef);
+    }
     this.updateDebugOverlay();
+
+    if (this.isPaused) return;
+    // Future: game simulation updates go here
   }
 
   private updateDebugOverlay(): void {
@@ -115,5 +125,7 @@ export class Game {
     this.debugOverlay = null;
     this.toolbar?.destroy();
     this.toolbar = null;
+    this.keyboardController?.detach();
+    this.keyboardController = null;
   }
 }
