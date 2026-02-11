@@ -39,10 +39,7 @@ function rotatedRect(cx: number, cy: number, w: number, h: number, angle: number
 }
 
 /** Evaluate a position on a multi-segment spline at global t in [0, 1]. */
-function evaluateSplineAt(
-  segments: BezierSegment[],
-  globalT: number,
-): { x: number; y: number } {
+function evaluateSplineAt(segments: BezierSegment[], globalT: number): { x: number; y: number } {
   const n = segments.length;
   const scaled = globalT * n;
   const segIdx = Math.min(Math.floor(scaled), n - 1);
@@ -51,11 +48,7 @@ function evaluateSplineAt(
 }
 
 /** Compute the tangent angle at a position on the spline. */
-function computeAngle(
-  segments: BezierSegment[],
-  t: number,
-  direction: 1 | -1,
-): number {
+function computeAngle(segments: BezierSegment[], t: number, direction: 1 | -1): number {
   const pos = evaluateSplineAt(segments, t);
   const posAhead = evaluateSplineAt(segments, Math.min(t + TANGENT_EPSILON, 1));
   let angle = Math.atan2(posAhead.y - pos.y, posAhead.x - pos.x);
@@ -105,11 +98,7 @@ export class VehicleLayer {
     }
   }
 
-  private drawTruck(
-    splines: BezierSegment[],
-    t: number,
-    direction: 1 | -1,
-  ): void {
+  private drawTruck(splines: BezierSegment[], t: number, direction: 1 | -1): void {
     const pos = evaluateSplineAt(splines, t);
     const angle = computeAngle(splines, t, direction);
 
@@ -131,11 +120,7 @@ export class VehicleLayer {
     this.graphics.stroke({ width: 0.5, color: TRUCK_BORDER });
   }
 
-  private drawTrain(
-    splines: BezierSegment[],
-    t: number,
-    direction: 1 | -1,
-  ): void {
+  private drawTrain(splines: BezierSegment[], t: number, direction: 1 | -1): void {
     // Engine
     const enginePos = evaluateSplineAt(splines, t);
     const engineAngle = computeAngle(splines, t, direction);
@@ -149,14 +134,7 @@ export class VehicleLayer {
 
       const wagonPos = evaluateSplineAt(splines, wagonT);
       const wagonAngle = computeAngle(splines, wagonT, direction);
-      this.drawRotatedBox(
-        wagonPos.x,
-        wagonPos.y,
-        WAGON_W,
-        TRAIN_H,
-        wagonAngle,
-        WAGON_COLOR,
-      );
+      this.drawRotatedBox(wagonPos.x, wagonPos.y, WAGON_W, TRAIN_H, wagonAngle, WAGON_COLOR);
     }
   }
 
