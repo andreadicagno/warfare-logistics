@@ -5,6 +5,8 @@ export type Faction = 'allied' | 'enemy';
 
 export type UnitType = 'infantry' | 'armor' | 'artillery';
 
+export type Echelon = 'army' | 'corps' | 'division' | 'regiment' | 'battalion';
+
 export interface MockUnit {
   id: string;
   name: string;
@@ -12,6 +14,19 @@ export interface MockUnit {
   type: UnitType;
   coord: HexCoord;
   supplies: ResourceStorage; // 0-1 each (percentage)
+  echelon: Echelon; // 'battalion' for line units, others for HQs
+  parentFormationId: string; // id of parent formation
+  isHq: boolean; // true for HQ units (regiment+)
+}
+
+export interface MockFormation {
+  id: string;
+  name: string;
+  echelon: Echelon;
+  faction: Faction;
+  hqCoord: HexCoord;
+  children: MockFormation[];
+  units: MockUnit[];
 }
 
 export type FacilityKind = 'depot' | 'factory' | 'railHub';
@@ -41,12 +56,20 @@ export interface MockVehicle {
   direction: 1 | -1; // forward or return trip
 }
 
+export interface AccessRamp {
+  facilityCoord: HexCoord;
+  routeHexCoord: HexCoord;
+  routeType: 'road' | 'railway';
+}
+
 export interface MockState {
   territory: Map<string, Faction>; // hex key -> faction
   frontLineEdges: Array<{ a: HexCoord; b: HexCoord }>; // edges between factions
   units: MockUnit[];
+  formations: MockFormation[];
   facilities: MockFacility[];
   routeStates: MockRouteState[];
   vehicles: MockVehicle[];
+  accessRamps: AccessRamp[];
   version: number; // increments on state change (for rebuild detection)
 }
