@@ -106,6 +106,8 @@ export class Sidebar {
   private urbanCost!: SliderRow;
   private cityConnectionDistance!: SliderRow;
   private railwayRedundancy!: SliderRow;
+  private roadReuseCost!: SliderRow;
+  private railwayReuseCost!: SliderRow;
 
   constructor(
     parent: HTMLElement,
@@ -281,6 +283,8 @@ export class Sidebar {
         urbanCost: this.urbanCost.getValue(),
         cityConnectionDistance: this.cityConnectionDistance.getValue(),
         railwayRedundancy: this.railwayRedundancy.getValue(),
+        roadReuseCost: this.roadReuseCost.getValue(),
+        railwayReuseCost: this.railwayReuseCost.getValue(),
       },
     };
   }
@@ -345,6 +349,8 @@ export class Sidebar {
     this.urbanCost.setValue(params.roads.urbanCost);
     this.cityConnectionDistance.setValue(params.roads.cityConnectionDistance);
     this.railwayRedundancy.setValue(params.roads.railwayRedundancy);
+    this.roadReuseCost.setValue(params.roads.roadReuseCost);
+    this.railwayReuseCost.setValue(params.roads.railwayReuseCost);
 
     this.ignorePresetChange = false;
     this.detectPreset();
@@ -712,6 +718,10 @@ export class Sidebar {
     content.appendChild(this.cityConnectionDistance.container);
     this.railwayRedundancy = this.createSliderRow('Railway Redundancy', 0, 5, 1, 2);
     content.appendChild(this.railwayRedundancy.container);
+    this.roadReuseCost = this.createSliderRow('Road Reuse Cost', 0, 1, 0.05, 0.1);
+    content.appendChild(this.roadReuseCost.container);
+    this.railwayReuseCost = this.createSliderRow('Railway Reuse Cost', 0, 1, 0.05, 0.1);
+    content.appendChild(this.railwayReuseCost.container);
   }
 
   // ---------------------------------------------------------------------------
