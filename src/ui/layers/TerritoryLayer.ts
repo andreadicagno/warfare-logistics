@@ -8,7 +8,7 @@ import { HexRenderer } from '../HexRenderer';
 const ALLIED_COLOR = 0x4488cc;
 const ENEMY_COLOR = 0xcc4444;
 const ALPHA_MAX = 0.45;
-const ALPHA_MIN = 0.01;
+const ALPHA_MIN = 0.08;
 const MAX_GRADIENT_DISTANCE = 6; // hex cells — beyond this, no overlay
 
 export class TerritoryLayer {
