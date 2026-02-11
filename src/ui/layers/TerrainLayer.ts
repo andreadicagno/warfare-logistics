@@ -2,23 +2,25 @@ import { HexGrid } from '@core/map/HexGrid';
 import type { GameMap, HexCell } from '@core/map/types';
 import { TerrainType } from '@core/map/types';
 import { Container, Graphics } from 'pixi.js';
+import { darken } from '../colorUtils';
 import { HexRenderer } from '../HexRenderer';
 
 const TERRAIN_COLORS: Record<TerrainType, number> = {
-  [TerrainType.Water]: 0x2b4a6b,
+  [TerrainType.Water]: 0x1a3a5c,
   [TerrainType.River]: 0x4a90b8,
-  [TerrainType.Plains]: 0x6b7a4a,
-  [TerrainType.Forest]: 0x3a5a35,
-  [TerrainType.Hills]: 0x7a6b50,
-  [TerrainType.Mountain]: 0x5a5a65,
-  [TerrainType.Marsh]: 0x4a6a55,
-  [TerrainType.Urban]: 0x4a4a4a,
+  [TerrainType.Plains]: 0x8a9e5e,
+  [TerrainType.Forest]: 0x2d5a2d,
+  [TerrainType.Hills]: 0x9e8a5a,
+  [TerrainType.Mountain]: 0xb0aab0,
+  [TerrainType.Marsh]: 0x5a7a6a,
+  [TerrainType.Urban]: 0x8b5e4b,
 };
 
-const BORDER_COLOR = 0x2a2a35;
-const URBAN_GRID_COLOR = 0x5a5a5a;
-const URBAN_DENSE_BASE = 0x404040;
-const URBAN_SPARSE_BASE = 0x555555;
+const BORDER_WIDTH = 0.5;
+const BORDER_DARKEN = 0.3;
+const URBAN_GRID_COLOR = 0x9b7b6b;
+const URBAN_DENSE_BASE = 0x6b4535;
+const URBAN_SPARSE_BASE = 0x9b6e5b;
 
 export class TerrainLayer {
   readonly container = new Container();
@@ -44,10 +46,11 @@ export class TerrainLayer {
       if (cell.terrain === TerrainType.Urban) {
         this.drawUrbanHex(cell, px, flat);
       } else {
+        const fillColor = TERRAIN_COLORS[cell.terrain];
         this.graphics.poly(flat);
-        this.graphics.fill({ color: TERRAIN_COLORS[cell.terrain] });
+        this.graphics.fill({ color: fillColor });
         this.graphics.poly(flat);
-        this.graphics.stroke({ width: 1, color: BORDER_COLOR });
+        this.graphics.stroke({ width: BORDER_WIDTH, color: darken(fillColor, BORDER_DARKEN) });
       }
     }
   }
@@ -105,7 +108,7 @@ export class TerrainLayer {
     const hasNonUrbanNeighbor = urbanNeighborCount < 6;
     if (hasNonUrbanNeighbor) {
       this.graphics.poly(flat);
-      this.graphics.stroke({ width: 1, color: BORDER_COLOR });
+      this.graphics.stroke({ width: BORDER_WIDTH, color: darken(baseColor, BORDER_DARKEN) });
     }
   }
 
