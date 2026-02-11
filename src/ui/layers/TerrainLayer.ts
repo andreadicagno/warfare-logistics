@@ -14,13 +14,13 @@ const TERRAIN_COLORS: Record<TerrainType, number> = {
   [TerrainType.Hills]: 0x9e8a5a,
   [TerrainType.Mountain]: 0xb0aab0,
   [TerrainType.Marsh]: 0x5a7a6a,
-  [TerrainType.Urban]: 0x8b5e4b,
+  [TerrainType.Urban]: 0x7a7a7a,
 };
 
 const BORDER_WIDTH = 0.5;
 const BORDER_DARKEN = 0.3;
-const URBAN_DENSE_BASE = 0x6b4535;
-const URBAN_SPARSE_BASE = 0x9b6e5b;
+const URBAN_DENSE_BASE = 0x606060;
+const URBAN_SPARSE_BASE = 0x8a8a8a;
 const NOISE_FREQUENCY = 0.15;
 const NOISE_AMPLITUDE = 0.08;
 const PATTERN_DARKEN = 0.15;
