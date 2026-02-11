@@ -1,3 +1,5 @@
+// Re-exported from MapGenerator for sidebar use
+import { MAP_SIZE_PRESETS } from '@core/map/MapGenerator';
 import type { GenerationParams, SeaSides } from '@core/map/types';
 import { DEFAULT_GENERATION_PARAMS } from '@core/map/types';
 import {
@@ -6,12 +8,6 @@ import {
   loadCustomPresets,
   saveCustomPreset,
 } from './presets';
-
-const MAP_SIZE_PRESETS: Record<string, { width: number; height: number }> = {
-  small: { width: 40, height: 30 },
-  medium: { width: 60, height: 45 },
-  large: { width: 80, height: 60 },
-};
 
 const INPUT_STYLE: Partial<CSSStyleDeclaration> = {
   background: '#1e1e2e',
@@ -390,7 +386,7 @@ export class Sidebar {
     const sizeRow = this.createSelectRow('Size Preset', ['small', 'medium', 'large'], 'medium');
     this.sizePresetSelect = sizeRow.select;
     this.sizePresetSelect.addEventListener('change', () => {
-      const preset = MAP_SIZE_PRESETS[this.sizePresetSelect.value];
+      const preset = MAP_SIZE_PRESETS[this.sizePresetSelect.value as keyof typeof MAP_SIZE_PRESETS];
       if (preset) {
         this.widthSlider.setValue(preset.width);
         this.heightSlider.setValue(preset.height);
