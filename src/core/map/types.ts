@@ -3,6 +3,20 @@ export interface HexCoord {
   r: number;
 }
 
+export type UrbanTier = 'metropolis' | 'city' | 'town';
+
+export interface UrbanCluster {
+  id: string;
+  tier: UrbanTier;
+  center: HexCoord;
+  cells: HexCoord[];
+}
+
+export interface SupplyHub {
+  coord: HexCoord;
+  size: 'large' | 'small';
+}
+
 export enum TerrainType {
   Water = 'water',
   River = 'river',
@@ -11,11 +25,7 @@ export enum TerrainType {
   Forest = 'forest',
   Hills = 'hills',
   Mountain = 'mountain',
-}
-
-export enum SettlementType {
-  Town = 'town',
-  City = 'city',
+  Urban = 'urban',
 }
 
 export interface HexCell {
@@ -24,7 +34,7 @@ export interface HexCell {
   elevation: number;
   moisture: number;
   navigable?: boolean;
-  settlement: SettlementType | null;
+  urbanClusterId: string | null;
 }
 
 export interface RoutePath {
@@ -36,6 +46,8 @@ export interface GameMap {
   width: number;
   height: number;
   cells: Map<string, HexCell>;
+  urbanClusters: UrbanCluster[];
+  supplyHubs: SupplyHub[];
   roads: RoutePath[];
   railways: RoutePath[];
 }
@@ -81,14 +93,16 @@ export interface RiverParams {
   lakeMaxSize: number;
 }
 
-export interface SettlementParams {
+export interface UrbanParams {
+  metropolisDensity: number;
   cityDensity: number;
   townDensity: number;
-  minCityDistance: number;
-  minTownDistance: number;
-  riverBonusCity: number;
-  waterBonusCity: number;
-  plainsBonusCity: number;
+  minMetropolisSpacing: number;
+  minCitySpacing: number;
+  minTownSpacing: number;
+  riverBonus: number;
+  waterBonus: number;
+  plainsBonus: number;
 }
 
 export interface RoadParams {
@@ -98,6 +112,7 @@ export interface RoadParams {
   hillsCost: number;
   marshCost: number;
   riverCost: number;
+  urbanCost: number;
   cityConnectionDistance: number;
 }
 
@@ -109,7 +124,7 @@ export interface GenerationParams {
   terrain: TerrainParams;
   smoothing: SmoothingParams;
   rivers: RiverParams;
-  settlements: SettlementParams;
+  urban: UrbanParams;
   roads: RoadParams;
 }
 
@@ -149,14 +164,16 @@ export const DEFAULT_GENERATION_PARAMS: GenerationParams = {
     lakeMinSize: 3,
     lakeMaxSize: 6,
   },
-  settlements: {
-    cityDensity: 3 / 1200,
-    townDensity: 8 / 1200,
-    minCityDistance: 8,
-    minTownDistance: 3,
-    riverBonusCity: 3,
-    waterBonusCity: 2,
-    plainsBonusCity: 1,
+  urban: {
+    metropolisDensity: 2,
+    cityDensity: 5,
+    townDensity: 8,
+    minMetropolisSpacing: 10,
+    minCitySpacing: 6,
+    minTownSpacing: 4,
+    riverBonus: 3,
+    waterBonus: 2,
+    plainsBonus: 1,
   },
   roads: {
     infrastructure: 'none',
@@ -165,6 +182,7 @@ export const DEFAULT_GENERATION_PARAMS: GenerationParams = {
     hillsCost: 3,
     marshCost: 3,
     riverCost: 6,
+    urbanCost: 1,
     cityConnectionDistance: 20,
   },
 };
