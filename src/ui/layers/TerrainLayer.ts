@@ -116,17 +116,15 @@ export class TerrainLayer {
 
     this.graphics.stroke({ width: 0.5, color: URBAN_GRID_COLOR });
 
-    if (isDense) {
-      const roofCount = 2 + (Math.abs(hash) % 3);
-      for (let i = 0; i < roofCount; i++) {
-        const rHash = (hash * (i + 1)) & 0xffff;
-        const rx = px.x + ((rHash & 0xff) / 255 - 0.5) * hexSize * 0.6;
-        const ry = px.y + (((rHash >> 8) & 0xff) / 255 - 0.5) * hexSize * 0.6;
-        const rw = hexSize * 0.08;
-        const rh = hexSize * 0.06;
-        this.graphics.rect(rx - rw / 2, ry - rh / 2, rw, rh);
-        this.graphics.fill({ color: URBAN_GRID_COLOR });
-      }
+    const roofCount = isDense ? 2 + (Math.abs(hash) % 3) : 1 + (Math.abs(hash) % 2);
+    for (let i = 0; i < roofCount; i++) {
+      const rHash = (hash * (i + 1)) & 0xffff;
+      const rx = px.x + ((rHash & 0xff) / 255 - 0.5) * hexSize * 0.6;
+      const ry = px.y + (((rHash >> 8) & 0xff) / 255 - 0.5) * hexSize * 0.6;
+      const rw = hexSize * 0.08;
+      const rh = hexSize * 0.06;
+      this.graphics.rect(rx - rw / 2, ry - rh / 2, rw, rh);
+      this.graphics.fill({ color: URBAN_GRID_COLOR });
     }
 
     const hasNonUrbanNeighbor = urbanNeighborCount < 6;
