@@ -1,159 +1,32 @@
-import { type Application, Graphics, Text, TextStyle } from 'pixi.js';
+import { type Application } from 'pixi.js';
 import { MapGenerator } from '@core/map/MapGenerator';
-import { SettlementType } from '@core/map/types';
 import type { GameMap } from '@core/map/types';
+import { MapRenderer } from '@ui/MapRenderer';
 
-/**
- * Main game class - orchestrates all game systems
- */
 export class Game {
   private app: Application;
   private isPaused: boolean = false;
   private map: GameMap | null = null;
+  private mapRenderer: MapRenderer | null = null;
 
   constructor(app: Application) {
     this.app = app;
   }
 
   async init(): Promise<void> {
-    // Generate map
     this.map = MapGenerator.generate({
       mapSize: 'small',
       geography: 'mixed',
-      initialInfrastructure: 'basic',
+      initialInfrastructure: 'none',
       seed: Date.now(),
     });
 
-    const terrainCounts = new Map<string, number>();
-    for (const cell of this.map.cells.values()) {
-      terrainCounts.set(cell.terrain, (terrainCounts.get(cell.terrain) ?? 0) + 1);
-    }
-    console.log('Map generated:', {
-      size: `${this.map.width}x${this.map.height}`,
-      cells: this.map.cells.size,
-      rivers: this.map.rivers.length,
-      roads: this.map.roads.length,
-      railways: this.map.railways.length,
-      terrain: Object.fromEntries(terrainCounts),
-      cities: [...this.map.cells.values()].filter((c) => c.settlement === SettlementType.City).length,
-      towns: [...this.map.cells.values()].filter((c) => c.settlement === SettlementType.Town).length,
-    });
+    this.mapRenderer = new MapRenderer(this.app, this.map);
 
-    // Placeholder: draw a simple test screen
-    this.drawTestScreen();
-
-    // Set up game loop
     this.app.ticker.add(this.update.bind(this));
-
-    // Set up keyboard controls
     this.setupControls();
-  }
 
-  private drawTestScreen(): void {
-    // Background grid (placeholder for map)
-    const grid = new Graphics();
-    grid.fill({ color: 0x16213e });
-    grid.rect(0, 0, this.app.screen.width, this.app.screen.height);
-    grid.fill();
-
-    // Draw grid lines
-    grid.stroke({ width: 1, color: 0x1a1a2e });
-    const gridSize = 50;
-    for (let x = 0; x < this.app.screen.width; x += gridSize) {
-      grid.moveTo(x, 0);
-      grid.lineTo(x, this.app.screen.height);
-    }
-    for (let y = 0; y < this.app.screen.height; y += gridSize) {
-      grid.moveTo(0, y);
-      grid.lineTo(this.app.screen.width, y);
-    }
-    grid.stroke();
-
-    this.app.stage.addChild(grid);
-
-    // Title text
-    const titleStyle = new TextStyle({
-      fontFamily: 'Arial',
-      fontSize: 48,
-      fontWeight: 'bold',
-      fill: '#e8e8e8',
-    });
-    const title = new Text({ text: 'SUPPLY LINE', style: titleStyle });
-    title.anchor.set(0.5);
-    title.x = this.app.screen.width / 2;
-    title.y = 80;
-    this.app.stage.addChild(title);
-
-    // Subtitle
-    const subtitleStyle = new TextStyle({
-      fontFamily: 'Arial',
-      fontSize: 18,
-      fill: '#888888',
-    });
-    const subtitle = new Text({
-      text: 'Logistics Strategy Game - MVP Setup Complete',
-      style: subtitleStyle,
-    });
-    subtitle.anchor.set(0.5);
-    subtitle.x = this.app.screen.width / 2;
-    subtitle.y = 130;
-    this.app.stage.addChild(subtitle);
-
-    // Instructions
-    const instructionsStyle = new TextStyle({
-      fontFamily: 'Arial',
-      fontSize: 14,
-      fill: '#666666',
-    });
-    const instructions = new Text({
-      text: 'Press SPACE to pause/unpause',
-      style: instructionsStyle,
-    });
-    instructions.anchor.set(0.5);
-    instructions.x = this.app.screen.width / 2;
-    instructions.y = this.app.screen.height - 30;
-    this.app.stage.addChild(instructions);
-
-    // Placeholder boxes for future UI elements
-    this.drawPlaceholderBox(50, 200, 300, 400, 'MAP AREA', 0x0f3460);
-    this.drawPlaceholderBox(this.app.screen.width - 350, 200, 300, 400, 'DETAILS PANEL', 0x0f3460);
-    this.drawPlaceholderBox(
-      50,
-      this.app.screen.height - 150,
-      this.app.screen.width - 100,
-      100,
-      'NOTIFICATIONS / LOG',
-      0x0f3460,
-    );
-  }
-
-  private drawPlaceholderBox(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    label: string,
-    color: number,
-  ): void {
-    const box = new Graphics();
-    box.fill({ color, alpha: 0.5 });
-    box.roundRect(x, y, width, height, 8);
-    box.fill();
-    box.stroke({ width: 2, color: 0x1a1a2e });
-    box.roundRect(x, y, width, height, 8);
-    box.stroke();
-    this.app.stage.addChild(box);
-
-    const labelStyle = new TextStyle({
-      fontFamily: 'Arial',
-      fontSize: 12,
-      fill: '#666666',
-    });
-    const text = new Text({ text: label, style: labelStyle });
-    text.anchor.set(0.5);
-    text.x = x + width / 2;
-    text.y = y + height / 2;
-    this.app.stage.addChild(text);
+    console.log('Supply Line initialized — map rendered');
   }
 
   private setupControls(): void {
@@ -171,8 +44,11 @@ export class Game {
 
   private update(_ticker: { deltaTime: number }): void {
     if (this.isPaused) return;
+  }
 
-    // Game update logic will go here
-    // const delta = ticker.deltaTime;
+  destroy(): void {
+    this.mapRenderer?.destroy();
+    this.mapRenderer = null;
+    this.map = null;
   }
 }
