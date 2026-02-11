@@ -1,6 +1,7 @@
 import { HexGrid } from '@core/map/HexGrid';
 import type { GameMap, HexCoord } from '@core/map/types';
 import { TerrainType } from '@core/map/types';
+import type { RouteHealth } from '@core/mock/types';
 import { Container, Graphics } from 'pixi.js';
 import { HexRenderer } from '../HexRenderer';
 import { type BezierSegment, catmullRomToBezier, cubicBezierPoint } from '../spline';
@@ -21,6 +22,13 @@ const SHARED_EDGE_OFFSET = 3;
 const BRIDGE_COLOR = 0x8b7355;
 const BRIDGE_WIDTH = 8;
 const BRIDGE_HEIGHT = 4;
+
+const HEALTH_COLORS: Record<RouteHealth, number> = {
+  good: 0x4a8c3f,
+  congested: 0xc8a832,
+  stressed: 0xb83a3a,
+  destroyed: 0x666666,
+};
 
 /** Estimate the arc length of a single Bezier segment by summing chord distances. */
 function estimateSegmentLength(seg: BezierSegment, samples: number): number {
@@ -48,7 +56,9 @@ export class RouteLayer {
   readonly container = new Container();
   private graphics = new Graphics();
   private gameMap: GameMap;
-  private built = false;
+  private builtVersion = -1;
+  private roadHealths: Map<number, RouteHealth>;
+  private railwayHealths: Map<number, RouteHealth>;
   private roadSplines: BezierSegment[][] = [];
   private railwaySplines: BezierSegment[][] = [];
 
@@ -60,19 +70,33 @@ export class RouteLayer {
     return this.railwaySplines;
   }
 
-  constructor(gameMap: GameMap) {
+  constructor(
+    gameMap: GameMap,
+    roadHealths?: Map<number, RouteHealth>,
+    railwayHealths?: Map<number, RouteHealth>,
+  ) {
     this.gameMap = gameMap;
+    this.roadHealths = roadHealths ?? new Map();
+    this.railwayHealths = railwayHealths ?? new Map();
     this.container.addChild(this.graphics);
   }
 
-  build(_bounds: { minX: number; minY: number; maxX: number; maxY: number }): void {
-    if (this.built) return;
-    this.built = true;
+  build(version: number): void {
+    if (this.builtVersion === version) return;
+    this.builtVersion = version;
     this.graphics.clear();
 
     const sharedEdges = this.computeSharedEdges();
     this.drawRoads(sharedEdges);
     this.drawRailways(sharedEdges);
+  }
+
+  updateData(
+    roadHealths: Map<number, RouteHealth>,
+    railwayHealths: Map<number, RouteHealth>,
+  ): void {
+    this.roadHealths = roadHealths;
+    this.railwayHealths = railwayHealths;
   }
 
   /** Find hex edges that both a road and a railway traverse. */
@@ -163,9 +187,12 @@ export class RouteLayer {
       this.drawBezierPath(segments, ROAD_BORDER_WIDTH, ROAD_BORDER_COLOR);
     }
 
-    // Pass 2: light fill
-    for (const { segments } of allSegments) {
-      this.drawBezierPath(segments, ROAD_FILL_WIDTH, ROAD_FILL_COLOR);
+    // Pass 2: health-colored fill (per route)
+    for (let i = 0; i < allSegments.length; i++) {
+      const health = this.roadHealths.get(i);
+      const fillColor = health ? HEALTH_COLORS[health] : ROAD_FILL_COLOR;
+      const alpha = health === 'destroyed' ? 0.5 : 1;
+      this.drawBezierPath(allSegments[i].segments, ROAD_FILL_WIDTH, fillColor, alpha);
     }
 
     // Bridges
@@ -174,13 +201,18 @@ export class RouteLayer {
     }
   }
 
-  private drawBezierPath(segments: BezierSegment[], width: number, color: number): void {
+  private drawBezierPath(
+    segments: BezierSegment[],
+    width: number,
+    color: number,
+    alpha = 1,
+  ): void {
     if (segments.length === 0) return;
     this.graphics.moveTo(segments[0].p0.x, segments[0].p0.y);
     for (const seg of segments) {
       this.graphics.bezierCurveTo(seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y, seg.p3.x, seg.p3.y);
     }
-    this.graphics.stroke({ width, color });
+    this.graphics.stroke({ width, color, alpha });
   }
 
   private drawRailways(sharedEdges: Set<string>): void {
@@ -199,9 +231,12 @@ export class RouteLayer {
       this.drawBezierPath(segments, RAILWAY_BORDER_WIDTH, RAILWAY_BORDER_COLOR);
     }
 
-    // Pass 2: lighter fill
-    for (const { segments } of allSegments) {
-      this.drawBezierPath(segments, RAILWAY_FILL_WIDTH, RAILWAY_FILL_COLOR);
+    // Pass 2: health-colored fill (per route)
+    for (let i = 0; i < allSegments.length; i++) {
+      const health = this.railwayHealths.get(i);
+      const fillColor = health ? HEALTH_COLORS[health] : RAILWAY_FILL_COLOR;
+      const alpha = health === 'destroyed' ? 0.5 : 1;
+      this.drawBezierPath(allSegments[i].segments, RAILWAY_FILL_WIDTH, fillColor, alpha);
     }
 
     // Bridges

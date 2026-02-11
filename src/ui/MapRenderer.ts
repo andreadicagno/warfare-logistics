@@ -1,4 +1,5 @@
 import { HexGrid } from '@core/map/HexGrid';
+import type { MockFacility } from '@core/mock/types';
 import type { GameMap, HexCoord } from '@core/map/types';
 import { Profiler } from '@core/Profiler';
 import { type Application, Container } from 'pixi.js';
@@ -24,6 +25,8 @@ export class MapRenderer {
   private selectionLayer: SelectionLayer;
   private boundOnFrame: () => void;
   private disabledLayers = new Set<LayerName>();
+  private supplyHubVersion = 1;
+  private routeVersion = 0;
 
   constructor(app: Application, gameMap: GameMap) {
     const prof = new Profiler('MapRenderer');
@@ -36,9 +39,19 @@ export class MapRenderer {
 
     this.camera = new Camera(this.worldContainer, this.app);
 
+    // Create placeholder facilities from supply hubs until MockSimulation is wired
+    const placeholderFacilities: MockFacility[] = gameMap.supplyHubs.map((hub, i) => ({
+      id: `facility-${i + 1}`,
+      kind: 'depot' as const,
+      coord: hub.coord,
+      size: hub.size,
+      storage: { fuel: 0.8, ammo: 0.6, food: 0.9, parts: 0.5 },
+      damaged: false,
+    }));
+
     this.terrainLayer = new TerrainLayer(gameMap);
     this.routeLayer = new RouteLayer(gameMap);
-    this.supplyHubLayer = new SupplyHubLayer(gameMap);
+    this.supplyHubLayer = new SupplyHubLayer(placeholderFacilities);
     this.selectionLayer = new SelectionLayer();
 
     this.worldContainer.addChild(this.terrainLayer.container);
@@ -48,8 +61,8 @@ export class MapRenderer {
 
     const bounds = this.camera.getVisibleBounds();
     prof.measure('TerrainLayer.build()', () => this.terrainLayer.build(bounds));
-    prof.measure('RouteLayer.build()', () => this.routeLayer.build(bounds));
-    prof.measure('SupplyHubLayer.build()', () => this.supplyHubLayer.build(bounds));
+    prof.measure('RouteLayer.build()', () => this.routeLayer.build(0));
+    prof.measure('SupplyHubLayer.build()', () => this.supplyHubLayer.build(1));
 
     const centerCol = Math.floor(gameMap.width / 2);
     const centerRow = Math.floor(gameMap.height / 2);
@@ -63,8 +76,8 @@ export class MapRenderer {
 
     const newBounds = this.camera.getVisibleBounds();
     this.terrainLayer.build(newBounds);
-    this.routeLayer.build(newBounds);
-    this.supplyHubLayer.build(newBounds);
+    this.routeLayer.build(0);
+    this.supplyHubLayer.build(1);
 
     prof.measure('RouteAnimator.init()', () => {
       this.routeAnimator = new RouteAnimator(() => this.camera.scale);
@@ -160,10 +173,10 @@ export class MapRenderer {
         this.terrainLayer.build(bounds);
         break;
       case 'routes':
-        this.routeLayer.build(bounds);
+        this.routeLayer.build(this.routeVersion);
         break;
       case 'supplyHubs':
-        this.supplyHubLayer.build(bounds);
+        this.supplyHubLayer.build(this.supplyHubVersion);
         break;
       // selection doesn't have build()
     }
