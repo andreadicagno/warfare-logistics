@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MapGenerator } from '../MapGenerator';
 import type { MapConfig } from '../types';
+import { TerrainType } from '../types';
 
 describe('MapGenerator', () => {
   const config: MapConfig = {
@@ -32,6 +33,12 @@ describe('MapGenerator', () => {
     it('populates cells map with correct count', () => {
       const map = MapGenerator.generate(config);
       expect(map.cells.size).toBe(40 * 30);
+    });
+
+    it('produces River terrain cells', () => {
+      const map = MapGenerator.generate(config);
+      const riverCells = [...map.cells.values()].filter((c) => c.terrain === TerrainType.River);
+      expect(riverCells.length).toBeGreaterThan(0);
     });
 
     it('produces roads', () => {
