@@ -116,7 +116,7 @@ export class Sidebar {
     this.wrapper = document.createElement('div');
     Object.assign(this.wrapper.style, {
       position: 'fixed',
-      right: '0',
+      left: '0',
       top: '0',
       bottom: '0',
       width: '300px',
@@ -130,15 +130,15 @@ export class Sidebar {
       pointerEvents: 'auto',
       userSelect: 'none',
       transition: 'transform 0.25s ease',
-      boxShadow: '-2px 0 12px rgba(0,0,0,0.4)',
+      boxShadow: '2px 0 12px rgba(0,0,0,0.4)',
     });
 
     // Toggle button
     this.toggleBtn = document.createElement('button');
-    this.toggleBtn.textContent = '\u25B6';
+    this.toggleBtn.textContent = '\u25C0';
     Object.assign(this.toggleBtn.style, {
       position: 'absolute',
-      left: '-28px',
+      right: '-28px',
       top: '50%',
       transform: 'translateY(-50%)',
       width: '28px',
@@ -146,14 +146,14 @@ export class Sidebar {
       background: 'rgba(15, 15, 25, 0.92)',
       color: '#ccc',
       border: 'none',
-      borderRadius: '4px 0 0 4px',
+      borderRadius: '0 4px 4px 0',
       cursor: 'pointer',
       fontSize: '14px',
       padding: '0',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      boxShadow: '-2px 0 6px rgba(0,0,0,0.3)',
+      boxShadow: '2px 0 6px rgba(0,0,0,0.3)',
     });
     this.toggleBtn.addEventListener('click', () => this.toggle());
     this.wrapper.appendChild(this.toggleBtn);
@@ -991,7 +991,7 @@ export class Sidebar {
 
   private toggle(): void {
     this.collapsed = !this.collapsed;
-    this.wrapper.style.transform = this.collapsed ? 'translateX(300px)' : 'translateX(0)';
-    this.toggleBtn.textContent = this.collapsed ? '\u25C0' : '\u25B6';
+    this.wrapper.style.transform = this.collapsed ? 'translateX(-300px)' : 'translateX(0)';
+    this.toggleBtn.textContent = this.collapsed ? '\u25B6' : '\u25C0';
   }
 }
