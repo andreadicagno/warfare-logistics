@@ -34,6 +34,7 @@ export type FacilityKind = 'depot' | 'factory' | 'railHub';
 export interface MockFacility {
   id: string;
   kind: FacilityKind;
+  faction: Faction;
   coord: HexCoord;
   size: 'large' | 'small';
   storage: ResourceStorage; // 0-1 each

@@ -835,6 +835,7 @@ export class MockSimulation {
       this.state.facilities.push({
         id: `facility-${i + 1}`,
         kind,
+        faction: this.state.territory.get(hubKey) ?? 'allied',
         coord,
         size: hub.size,
         storage: makeStorage(storageLevel, storageLevel, storageLevel, storageLevel),
@@ -842,11 +843,85 @@ export class MockSimulation {
       });
     }
 
+    // Add forward depots near the front line (2-3 per faction)
+    this.placeForwardDepots(frontAvgQ, routeHexKeys, forbidden);
+
     // Mark 1-2 closest to front as damaged
     hubDistances.sort((a, b) => a.distance - b.distance);
     const damagedCount = Math.min(this.randomInt(1, 2), hubDistances.length);
     for (let i = 0; i < damagedCount; i++) {
       this.state.facilities[hubDistances[i].index].damaged = true;
+    }
+  }
+
+  /** Place 2-3 small forward depots near the front for each faction. */
+  private placeForwardDepots(
+    frontAvgQ: number,
+    routeHexKeys: Set<string>,
+    forbidden: Set<TerrainType>,
+  ): void {
+    // Collect front-adjacent hexes by faction
+    const frontHexKeys = new Set<string>();
+    for (const edge of this.state.frontLineEdges) {
+      frontHexKeys.add(HexGrid.key(edge.a));
+      frontHexKeys.add(HexGrid.key(edge.b));
+    }
+
+    const usedKeys = new Set<string>();
+    for (const f of this.state.facilities) {
+      usedKeys.add(HexGrid.key(f.coord));
+    }
+
+    for (const faction of ['allied', 'enemy'] as Faction[]) {
+      // Find hexes 2-4 behind the front in friendly territory
+      const candidates: HexCoord[] = [];
+      for (const [key, cell] of this.map.cells) {
+        if (forbidden.has(cell.terrain)) continue;
+        if (usedKeys.has(key)) continue;
+        if (routeHexKeys.has(key)) continue;
+
+        const cellFaction = this.state.territory.get(key);
+        if (cellFaction !== faction) continue;
+
+        // Check distance to front (by q relative to front avg)
+        const behindDist =
+          faction === 'allied' ? frontAvgQ - cell.coord.q : cell.coord.q - frontAvgQ;
+        if (behindDist < 2 || behindDist > 5) continue;
+
+        // Must have passable neighbors
+        const passable = HexGrid.neighbors(cell.coord).filter((nb) => {
+          const c = this.map.cells.get(HexGrid.key(nb));
+          return c && !forbidden.has(c.terrain);
+        });
+        if (passable.length < 4) continue;
+
+        candidates.push(cell.coord);
+      }
+
+      this.shuffle(candidates);
+
+      const count = this.randomInt(2, 3);
+      let placed = 0;
+      for (const coord of candidates) {
+        if (placed >= count) break;
+
+        // Ensure spacing from existing facilities (at least 6 hexes)
+        const tooClose = this.state.facilities.some((f) => HexGrid.distance(f.coord, coord) < 6);
+        if (tooClose) continue;
+
+        const id = `facility-fwd-${faction}-${placed + 1}`;
+        this.state.facilities.push({
+          id,
+          kind: 'depot',
+          faction,
+          coord,
+          size: 'small',
+          storage: makeStorage(0.5, 0.5, 0.5, 0.5),
+          damaged: false,
+        });
+        usedKeys.add(HexGrid.key(coord));
+        placed++;
+      }
     }
   }
 

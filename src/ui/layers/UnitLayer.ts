@@ -63,7 +63,7 @@ const PULSE_FAST_MIN_ALPHA = 0.4;
 // --- Hierarchy line style ---
 const HIERARCHY_LINE_COLOR_ALLIED = 0x88aacc;
 const HIERARCHY_LINE_COLOR_ENEMY = 0xcc8888;
-const HIERARCHY_LINE_ALPHA = 0.25;
+const HIERARCHY_LINE_ALPHA = 0.5;
 const DASH_LENGTH = 4;
 const GAP_LENGTH = 3;
 

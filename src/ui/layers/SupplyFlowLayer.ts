@@ -1,13 +1,14 @@
 import { HexGrid } from '@core/map/HexGrid';
-import type { MockFacility, MockUnit } from '@core/mock/types';
+import type { Faction, MockFacility, MockUnit } from '@core/mock/types';
 import { ResourceType } from '@data/types';
 import { Container, Graphics, type Ticker } from 'pixi.js';
 import { HexRenderer } from '../HexRenderer';
 
 const PARTICLE_RADIUS = 2.5;
-const PARTICLE_COLOR = 0xddaa33;
-const PARTICLE_DAMAGED_COLOR = 0xcc4433;
-const PARTICLE_ALPHA = 0.75;
+const ALLIED_PARTICLE_COLOR = 0x4488cc;
+const ENEMY_PARTICLE_COLOR = 0xcc4444;
+const ALLIED_PARTICLE_ALPHA = 0.75;
+const ENEMY_PARTICLE_ALPHA = 0.3;
 const MIN_ZOOM = 0.2;
 
 const SUPPLY_RANGE: Record<string, number> = {
@@ -26,7 +27,7 @@ interface SupplyArc {
   midX: number;
   midY: number;
   pixelDist: number;
-  damaged: boolean;
+  faction: Faction;
   baseSpeed: number;
 }
 
@@ -42,12 +43,11 @@ function avgSupply(unit: MockUnit): number {
   );
 }
 
-function demandParticles(avg: number, damaged: boolean): number {
-  const cap = damaged ? 2 : 5;
+function demandParticles(avg: number): number {
   if (avg >= 1.0) return 0;
-  if (avg > 0.8) return Math.min(1, cap);
-  if (avg > 0.2) return Math.min(Math.round(2 + (0.8 - avg) / 0.6), cap);
-  return cap;
+  if (avg > 0.8) return 1;
+  if (avg > 0.2) return Math.round(2 + (0.8 - avg) / 0.6);
+  return 5;
 }
 
 function quadBezier(
@@ -103,8 +103,7 @@ export class SupplyFlowLayer {
 
     for (const p of this.particles) {
       const arc = this.arcs[p.arcIndex];
-      const speed = arc.baseSpeed * (arc.damaged ? 0.5 : 1);
-      p.t += (speed * dt) / arc.pixelDist;
+      p.t += (arc.baseSpeed * dt) / arc.pixelDist;
       if (p.t > 1) p.t -= 1;
     }
 
@@ -112,9 +111,10 @@ export class SupplyFlowLayer {
     for (const p of this.particles) {
       const arc = this.arcs[p.arcIndex];
       const pos = quadBezier(arc.fromX, arc.fromY, arc.midX, arc.midY, arc.toX, arc.toY, p.t);
-      const color = arc.damaged ? PARTICLE_DAMAGED_COLOR : PARTICLE_COLOR;
+      const color = arc.faction === 'allied' ? ALLIED_PARTICLE_COLOR : ENEMY_PARTICLE_COLOR;
+      const alpha = arc.faction === 'allied' ? ALLIED_PARTICLE_ALPHA : ENEMY_PARTICLE_ALPHA;
       this.graphics.circle(pos.x, pos.y, PARTICLE_RADIUS);
-      this.graphics.fill({ color, alpha: PARTICLE_ALPHA });
+      this.graphics.fill({ color, alpha });
     }
   }
 
@@ -127,18 +127,19 @@ export class SupplyFlowLayer {
     this.arcs = [];
     this.particles = [];
 
-    const alliedBattalions = this.units.filter((u) => u.faction === 'allied' && !u.isHq);
+    const battalions = this.units.filter((u) => !u.isHq);
 
     for (const facility of this.facilities) {
       const range = SUPPLY_RANGE[facility.kind] ?? 8;
       const fromPx = HexRenderer.hexToPixel(facility.coord);
 
-      for (const unit of alliedBattalions) {
+      for (const unit of battalions) {
+        if (unit.faction !== facility.faction) continue;
         const hexDist = HexGrid.distance(facility.coord, unit.coord);
         if (hexDist > range || hexDist === 0) continue;
 
         const avg = avgSupply(unit);
-        const count = demandParticles(avg, facility.damaged);
+        const count = demandParticles(avg);
         if (count === 0) continue;
 
         const toPx = HexRenderer.hexToPixel(unit.coord);
@@ -160,7 +161,7 @@ export class SupplyFlowLayer {
           midX: mx,
           midY: my,
           pixelDist,
-          damaged: facility.damaged,
+          faction: facility.faction,
           baseSpeed: 30 + (1 - hexDist / range) * 30,
         });
 

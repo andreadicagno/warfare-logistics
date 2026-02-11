@@ -36,7 +36,7 @@ interface SelectRow {
 export class Sidebar {
   private wrapper: HTMLDivElement;
   private toggleBtn: HTMLButtonElement;
-  private collapsed = false;
+  private collapsed = true;
   private onGenerate: (params: GenerationParams) => void;
   private onLayerToggle: ((layer: LayerName, visible: boolean) => void) | null = null;
 
@@ -134,12 +134,13 @@ export class Sidebar {
       pointerEvents: 'auto',
       userSelect: 'none',
       transition: 'transform 0.25s ease',
+      transform: 'translateX(-300px)',
       boxShadow: '2px 0 12px rgba(0,0,0,0.4)',
     });
 
     // Toggle button
     this.toggleBtn = document.createElement('button');
-    this.toggleBtn.textContent = '\u25C0';
+    this.toggleBtn.textContent = '\u25B6';
     Object.assign(this.toggleBtn.style, {
       position: 'absolute',
       right: '-28px',
