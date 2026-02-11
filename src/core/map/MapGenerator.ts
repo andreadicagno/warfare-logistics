@@ -4,6 +4,7 @@ import { SettlementPlacer } from './SettlementPlacer';
 import { SmoothingPass } from './SmoothingPass';
 import { TerrainGenerator } from './TerrainGenerator';
 import type { GameMap, MapConfig } from './types';
+import { DEFAULT_GENERATION_PARAMS } from './types';
 
 const MAP_SIZES: Record<MapConfig['mapSize'], { width: number; height: number }> = {
   small: { width: 40, height: 30 },
@@ -16,24 +17,28 @@ export class MapGenerator {
     const { width, height } = MAP_SIZES[config.mapSize];
 
     // Phase 1 & 2: Elevation + terrain assignment
-    const cells = TerrainGenerator.generate(width, height, config.geography, config.seed);
-
-    // Phase 3: Rivers
-    RiverGenerator.generate(cells, width, height, config.seed);
-
-    // Phase 4: Smoothing
-    SmoothingPass.apply(cells, width, height);
-
-    // Settlement placement
-    SettlementPlacer.place(cells, width, height);
-
-    // Initial infrastructure
-    const { roads, railways } = RoadGenerator.generate(
-      cells,
+    const cells = TerrainGenerator.generate(
       width,
       height,
-      config.initialInfrastructure,
+      { ...DEFAULT_GENERATION_PARAMS.terrain, geography: config.geography },
+      DEFAULT_GENERATION_PARAMS.seaSides,
+      config.seed,
     );
+
+    // Phase 3: Rivers
+    RiverGenerator.generate(cells, width, height, config.seed, DEFAULT_GENERATION_PARAMS.rivers);
+
+    // Phase 4: Smoothing
+    SmoothingPass.apply(cells, width, height, DEFAULT_GENERATION_PARAMS.smoothing);
+
+    // Settlement placement
+    SettlementPlacer.place(cells, width, height, DEFAULT_GENERATION_PARAMS.settlements);
+
+    // Initial infrastructure
+    const { roads, railways } = RoadGenerator.generate(cells, width, height, {
+      ...DEFAULT_GENERATION_PARAMS.roads,
+      infrastructure: config.initialInfrastructure,
+    });
 
     return {
       width,
