@@ -378,6 +378,7 @@ export class Sidebar {
       { key: 'flows', label: 'Flows' },
       { key: 'vehicles', label: 'Vehicles' },
       { key: 'supplyHubs', label: 'Supply Hubs' },
+      { key: 'supplyFlow', label: 'Supply Flow' },
       { key: 'frontLine', label: 'Front Line' },
       { key: 'units', label: 'Units' },
       { key: 'selection', label: 'Selection' },

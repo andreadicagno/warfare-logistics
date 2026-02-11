@@ -10,6 +10,7 @@ import { FlowLayer } from './layers/FlowLayer';
 import { FrontLineLayer } from './layers/FrontLineLayer';
 import { RouteLayer } from './layers/RouteLayer';
 import { SelectionLayer } from './layers/SelectionLayer';
+import { SupplyFlowLayer } from './layers/SupplyFlowLayer';
 import { SupplyHubLayer } from './layers/SupplyHubLayer';
 import { TerrainLayer } from './layers/TerrainLayer';
 import { TerritoryLayer } from './layers/TerritoryLayer';
@@ -23,6 +24,7 @@ export type LayerName =
   | 'flows'
   | 'vehicles'
   | 'supplyHubs'
+  | 'supplyFlow'
   | 'frontLine'
   | 'units'
   | 'selection';
@@ -38,6 +40,7 @@ export class MapRenderer {
   private flowLayer: FlowLayer;
   private vehicleLayer: VehicleLayer;
   private supplyHubLayer: SupplyHubLayer;
+  private supplyFlowLayer: SupplyFlowLayer;
   private frontLineLayer: FrontLineLayer;
   private unitLayer: UnitLayer;
   private selectionLayer: SelectionLayer;
@@ -91,6 +94,7 @@ export class MapRenderer {
     this.flowLayer = new FlowLayer(() => this.camera.scale);
     this.vehicleLayer = new VehicleLayer(() => this.camera.scale);
     this.supplyHubLayer = new SupplyHubLayer(this.mockSim.state.facilities);
+    this.supplyFlowLayer = new SupplyFlowLayer(() => this.camera.scale);
     this.frontLineLayer = new FrontLineLayer();
     this.unitLayer = new UnitLayer();
     this.selectionLayer = new SelectionLayer();
@@ -102,6 +106,7 @@ export class MapRenderer {
     this.worldContainer.addChild(this.flowLayer.container);
     this.worldContainer.addChild(this.vehicleLayer.container);
     this.worldContainer.addChild(this.supplyHubLayer.container);
+    this.worldContainer.addChild(this.supplyFlowLayer.container);
     this.worldContainer.addChild(this.frontLineLayer.container);
     this.worldContainer.addChild(this.unitLayer.container);
     this.worldContainer.addChild(this.selectionLayer.container);
@@ -118,6 +123,8 @@ export class MapRenderer {
     this.unitLayer.updateFormations(this.mockSim.state.formations);
     this.unitLayer.build(this.mockSim.state.version);
     this.supplyHubLayer.build(this.mockSim.state.version);
+    this.supplyFlowLayer.updateData(this.mockSim.state.facilities, this.mockSim.state.units);
+    this.supplyFlowLayer.rebuild(this.mockSim.state.version);
     this.lastMockVersion = this.mockSim.state.version;
 
     const centerCol = Math.floor(gameMap.width / 2);
@@ -230,6 +237,8 @@ export class MapRenderer {
         return this.vehicleLayer.container;
       case 'supplyHubs':
         return this.supplyHubLayer.container;
+      case 'supplyFlow':
+        return this.supplyFlowLayer.container;
       case 'frontLine':
         return this.frontLineLayer.container;
       case 'units':
@@ -253,6 +262,9 @@ export class MapRenderer {
       case 'supplyHubs':
         this.supplyHubLayer.build(this.lastMockVersion);
         break;
+      case 'supplyFlow':
+        this.supplyFlowLayer.rebuild(this.lastMockVersion);
+        break;
       case 'frontLine':
         this.frontLineLayer.build(this.lastMockVersion);
         break;
@@ -273,6 +285,7 @@ export class MapRenderer {
     this.flowLayer.destroy();
     this.vehicleLayer.destroy();
     this.supplyHubLayer.destroy();
+    this.supplyFlowLayer.destroy();
     this.frontLineLayer.destroy();
     this.unitLayer.destroy();
     this.selectionLayer.destroy();
@@ -308,11 +321,14 @@ export class MapRenderer {
       this.unitLayer.build(this.lastMockVersion);
       this.supplyHubLayer.updateData(this.mockSim.state.facilities);
       this.supplyHubLayer.build(this.lastMockVersion);
+      this.supplyFlowLayer.updateData(this.mockSim.state.facilities, this.mockSim.state.units);
+      this.supplyFlowLayer.rebuild(this.lastMockVersion);
     }
 
     // Per-frame animated layers
     this.flowLayer.update(this.app.ticker);
     this.vehicleLayer.update(this.app.ticker, this.mockSim.state.vehicles);
+    this.supplyFlowLayer.update(this.app.ticker);
     this.unitLayer.update(dt);
   }
 }
