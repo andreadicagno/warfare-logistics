@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { HexGrid } from '../HexGrid';
-import { RiverGenerator } from '../RiverGenerator';
 import { RoadGenerator } from '../RoadGenerator';
 import { SettlementPlacer } from '../SettlementPlacer';
 import { SmoothingPass } from '../SmoothingPass';
@@ -11,7 +10,6 @@ import { TerrainType } from '../types';
 describe('RoadGenerator', () => {
   function makeMap() {
     const cells = TerrainGenerator.generate(40, 30, 'mixed', 42);
-    RiverGenerator.generate(cells, 40, 30, 42);
     SmoothingPass.apply(cells, 40, 30);
     SettlementPlacer.place(cells, 40, 30);
     return cells;
@@ -93,7 +91,6 @@ describe('RoadGenerator', () => {
             terrain: TerrainType.Plains,
             elevation: 0.4,
             moisture: 0.3,
-            riverEdges: new Set(),
             settlement: null,
           });
         }
@@ -111,7 +108,6 @@ describe('RoadGenerator', () => {
         terrain: TerrainType.Plains,
         elevation: 0.4,
         moisture: 0.3,
-        riverEdges: new Set(),
         settlement: null,
       });
       cells.set('0,0', {
@@ -119,7 +115,6 @@ describe('RoadGenerator', () => {
         terrain: TerrainType.Plains,
         elevation: 0.4,
         moisture: 0.3,
-        riverEdges: new Set(),
         settlement: null,
       });
       for (const n of HexGrid.neighbors({ q: 2, r: 2 })) {
@@ -128,7 +123,6 @@ describe('RoadGenerator', () => {
           terrain: TerrainType.Mountain,
           elevation: 0.9,
           moisture: 0.3,
-          riverEdges: new Set(),
           settlement: null,
         });
       }

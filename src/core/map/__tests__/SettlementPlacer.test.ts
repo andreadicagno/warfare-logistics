@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { HexGrid } from '../HexGrid';
-import { RiverGenerator } from '../RiverGenerator';
 import { SettlementPlacer } from '../SettlementPlacer';
 import { SmoothingPass } from '../SmoothingPass';
 import { TerrainGenerator } from '../TerrainGenerator';
@@ -9,7 +8,6 @@ import { SettlementType, TerrainType } from '../types';
 describe('SettlementPlacer', () => {
   function makeMap() {
     const cells = TerrainGenerator.generate(40, 30, 'mixed', 42);
-    RiverGenerator.generate(cells, 40, 30, 42);
     SmoothingPass.apply(cells, 40, 30);
     return cells;
   }

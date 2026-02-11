@@ -47,14 +47,13 @@ export class DebugOverlay {
 
     if (info.cell) {
       const c = info.cell;
-      const rivers = c.riverEdges.size > 0 ? `edges ${[...c.riverEdges].join(', ')}` : 'none';
       lines.push(
         '',
         '--- Cell Info ---',
         `Terrain: ${c.terrain}`,
         `Elevation: ${c.elevation.toFixed(2)}`,
         `Moisture: ${c.moisture.toFixed(2)}`,
-        `River: ${rivers}`,
+        `Navigable: ${c.navigable ? 'yes' : 'no'}`,
         `Road: ${info.hasRoad ? 'yes' : 'no'}`,
         `Railway: ${info.hasRailway ? 'yes' : 'no'}`,
         `Settlement: ${c.settlement ?? 'none'}`,

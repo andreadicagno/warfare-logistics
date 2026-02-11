@@ -35,7 +35,7 @@ export class SettlementPlacer {
         .map((n) => cells.get(HexGrid.key(n))!)
         .filter(Boolean);
 
-      if (cell.riverEdges.size > 0) score += 3;
+      if (neighbors.some((n) => n.terrain === TerrainType.River)) score += 3;
       if (neighbors.some((n) => n.terrain === TerrainType.Water)) score += 2;
       score += neighbors.filter((n) => n.terrain === TerrainType.Plains).length;
 
@@ -58,8 +58,8 @@ export class SettlementPlacer {
 
   private static placeTowns(
     cells: Map<string, HexCell>,
-    _width: number,
-    _height: number,
+    width: number,
+    height: number,
     count: number,
   ): void {
     const cities = [...cells.values()]
@@ -87,7 +87,11 @@ export class SettlementPlacer {
         }
       }
 
-      if (cell.riverEdges.size > 0) score += 1;
+      const townNeighbors = HexGrid.neighbors(cell.coord)
+        .filter((n) => HexGrid.inBounds(n, width, height))
+        .map((n) => cells.get(HexGrid.key(n))!)
+        .filter(Boolean);
+      if (townNeighbors.some((n) => n.terrain === TerrainType.River)) score += 1;
 
       candidates.push({ coord: cell.coord, score });
     }

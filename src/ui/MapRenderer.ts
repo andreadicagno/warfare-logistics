@@ -3,7 +3,6 @@ import type { GameMap, HexCoord } from '@core/map/types';
 import { type Application, Container } from 'pixi.js';
 import { Camera } from './Camera';
 import { HexRenderer } from './HexRenderer';
-import { RiverLayer } from './layers/RiverLayer';
 import { RouteLayer } from './layers/RouteLayer';
 import { SelectionLayer } from './layers/SelectionLayer';
 import { SettlementLayer } from './layers/SettlementLayer';
@@ -15,7 +14,6 @@ export class MapRenderer {
   private worldContainer: Container;
   private camera: Camera;
   private terrainLayer: TerrainLayer;
-  private riverLayer: RiverLayer;
   private routeLayer: RouteLayer;
   private settlementLayer: SettlementLayer;
   private selectionLayer: SelectionLayer;
@@ -31,20 +29,17 @@ export class MapRenderer {
     this.camera = new Camera(this.worldContainer, this.app);
 
     this.terrainLayer = new TerrainLayer(gameMap);
-    this.riverLayer = new RiverLayer(gameMap);
     this.routeLayer = new RouteLayer(gameMap);
     this.settlementLayer = new SettlementLayer(gameMap);
     this.selectionLayer = new SelectionLayer();
 
     this.worldContainer.addChild(this.terrainLayer.container);
-    this.worldContainer.addChild(this.riverLayer.container);
     this.worldContainer.addChild(this.routeLayer.container);
     this.worldContainer.addChild(this.settlementLayer.container);
     this.worldContainer.addChild(this.selectionLayer.container);
 
     const bounds = this.camera.getVisibleBounds();
     this.terrainLayer.build(bounds);
-    this.riverLayer.build(bounds);
     this.routeLayer.build(bounds);
     this.settlementLayer.build(bounds);
 
@@ -60,7 +55,6 @@ export class MapRenderer {
 
     const newBounds = this.camera.getVisibleBounds();
     this.terrainLayer.build(newBounds);
-    this.riverLayer.build(newBounds);
     this.routeLayer.build(newBounds);
     this.settlementLayer.build(newBounds);
 
@@ -112,7 +106,6 @@ export class MapRenderer {
     this.app.stage.off('pointermove', this.onPointerMove);
     this.camera.detach();
     this.terrainLayer.destroy();
-    this.riverLayer.destroy();
     this.routeLayer.destroy();
     this.settlementLayer.destroy();
     this.selectionLayer.destroy();
@@ -131,7 +124,6 @@ export class MapRenderer {
 
     const bounds = this.camera.getVisibleBounds();
     this.terrainLayer.build(bounds);
-    this.riverLayer.build(bounds);
     this.routeLayer.build(bounds);
     this.settlementLayer.build(bounds);
   }

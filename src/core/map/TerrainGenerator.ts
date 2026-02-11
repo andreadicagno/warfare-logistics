@@ -39,7 +39,6 @@ export class TerrainGenerator {
           terrain,
           elevation,
           moisture,
-          riverEdges: new Set(),
           settlement: null,
         });
       }

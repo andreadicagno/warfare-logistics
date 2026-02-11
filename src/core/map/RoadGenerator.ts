@@ -9,6 +9,7 @@ const TERRAIN_COST: Record<TerrainType, number> = {
   [TerrainType.Forest]: 2,
   [TerrainType.Hills]: 3,
   [TerrainType.Marsh]: 3,
+  [TerrainType.River]: 6,
   [TerrainType.Mountain]: Infinity,
   [TerrainType.Water]: Infinity,
 };

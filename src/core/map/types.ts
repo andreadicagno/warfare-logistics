@@ -5,6 +5,7 @@ export interface HexCoord {
 
 export enum TerrainType {
   Water = 'water',
+  River = 'river',
   Plains = 'plains',
   Marsh = 'marsh',
   Forest = 'forest',
@@ -22,7 +23,7 @@ export interface HexCell {
   terrain: TerrainType;
   elevation: number;
   moisture: number;
-  riverEdges: Set<number>;
+  navigable?: boolean;
   settlement: SettlementType | null;
 }
 
@@ -31,15 +32,10 @@ export interface RoutePath {
   type: 'road' | 'railway';
 }
 
-export interface RiverPath {
-  edges: Array<{ hex: HexCoord; edge: number }>;
-}
-
 export interface GameMap {
   width: number;
   height: number;
   cells: Map<string, HexCell>;
-  rivers: RiverPath[];
   roads: RoutePath[];
   railways: RoutePath[];
 }

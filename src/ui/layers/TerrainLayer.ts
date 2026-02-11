@@ -5,6 +5,7 @@ import { HexRenderer } from '../HexRenderer';
 
 const TERRAIN_COLORS: Record<TerrainType, number> = {
   [TerrainType.Water]: 0x2b4a6b,
+  [TerrainType.River]: 0x4a90b8,
   [TerrainType.Plains]: 0x6b7a4a,
   [TerrainType.Forest]: 0x3a5a35,
   [TerrainType.Hills]: 0x7a6b50,

@@ -34,11 +34,6 @@ describe('MapGenerator', () => {
       expect(map.cells.size).toBe(40 * 30);
     });
 
-    it('produces rivers', () => {
-      const map = MapGenerator.generate(config);
-      expect(map.rivers.length).toBeGreaterThan(0);
-    });
-
     it('produces roads', () => {
       const map = MapGenerator.generate(config);
       expect(map.roads.length).toBeGreaterThan(0);
@@ -59,7 +54,6 @@ describe('MapGenerator', () => {
       const a = MapGenerator.generate(config);
       const b = MapGenerator.generate(config);
       expect(a.cells.size).toBe(b.cells.size);
-      expect(a.rivers.length).toBe(b.rivers.length);
       expect(a.roads.length).toBe(b.roads.length);
       for (const [key, cellA] of a.cells) {
         const cellB = b.cells.get(key)!;

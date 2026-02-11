@@ -4,11 +4,12 @@ import { TerrainType } from './types';
 
 const TERRAIN_GROUP: Record<TerrainType, number> = {
   [TerrainType.Water]: 0,
-  [TerrainType.Marsh]: 1,
-  [TerrainType.Plains]: 2,
-  [TerrainType.Forest]: 3,
-  [TerrainType.Hills]: 4,
-  [TerrainType.Mountain]: 5,
+  [TerrainType.River]: 1,
+  [TerrainType.Marsh]: 2,
+  [TerrainType.Plains]: 3,
+  [TerrainType.Forest]: 4,
+  [TerrainType.Hills]: 5,
+  [TerrainType.Mountain]: 6,
 };
 
 export class SmoothingPass {
@@ -30,6 +31,7 @@ export class SmoothingPass {
         .map((n) => cells.get(HexGrid.key(n))!)
         .filter(Boolean);
 
+      if (cell.terrain === TerrainType.River) continue;
       if (neighbors.length === 0) continue;
 
       const cellGroup = TERRAIN_GROUP[cell.terrain];

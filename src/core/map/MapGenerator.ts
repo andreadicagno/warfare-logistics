@@ -1,4 +1,3 @@
-import { RiverGenerator } from './RiverGenerator';
 import { RoadGenerator } from './RoadGenerator';
 import { SettlementPlacer } from './SettlementPlacer';
 import { SmoothingPass } from './SmoothingPass';
@@ -18,10 +17,7 @@ export class MapGenerator {
     // Phase 1 & 2: Elevation + terrain assignment
     const cells = TerrainGenerator.generate(width, height, config.geography, config.seed);
 
-    // Phase 3: Rivers
-    const rivers = RiverGenerator.generate(cells, width, height, config.seed);
-
-    // Phase 4: Smoothing
+    // Phase 3: Smoothing
     SmoothingPass.apply(cells, width, height);
 
     // Settlement placement
@@ -39,7 +35,6 @@ export class MapGenerator {
       width,
       height,
       cells,
-      rivers,
       roads,
       railways,
     };
