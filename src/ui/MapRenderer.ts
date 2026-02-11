@@ -1,6 +1,6 @@
 import { HexGrid } from '@core/map/HexGrid';
-import type { MockFacility } from '@core/mock/types';
 import type { GameMap, HexCoord } from '@core/map/types';
+import type { MockFacility } from '@core/mock/types';
 import { Profiler } from '@core/Profiler';
 import { type Application, Container } from 'pixi.js';
 import { Camera } from './Camera';
