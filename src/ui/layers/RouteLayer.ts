@@ -1,4 +1,6 @@
+import { HexGrid } from '@core/map/HexGrid';
 import type { GameMap } from '@core/map/types';
+import { TerrainType } from '@core/map/types';
 import { Container, Graphics } from 'pixi.js';
 import { HexRenderer } from '../HexRenderer';
 
@@ -8,6 +10,9 @@ const RAILWAY_COLOR = 0x3a3a45;
 const RAILWAY_WIDTH = 3;
 const TIE_LENGTH = 6;
 const TIE_SPACING = 10;
+const BRIDGE_COLOR = 0x8b7355;
+const BRIDGE_WIDTH = 8;
+const BRIDGE_HEIGHT = 4;
 
 export class RouteLayer {
   readonly container = new Container();
@@ -35,6 +40,8 @@ export class RouteLayer {
         const to = points[i + 1];
         this.drawDashedLine(from.x, from.y, to.x, to.y, 6, 4);
       }
+
+      this.drawBridges(route.hexes);
     }
   }
 
@@ -48,6 +55,8 @@ export class RouteLayer {
         this.graphics.lineTo(points[i].x, points[i].y);
       }
       this.graphics.stroke({ width: RAILWAY_WIDTH, color: RAILWAY_COLOR });
+
+      this.drawBridges(route.hexes);
 
       for (let i = 0; i < points.length - 1; i++) {
         const from = points[i];
@@ -68,6 +77,22 @@ export class RouteLayer {
           this.graphics.lineTo(cx + (nx * TIE_LENGTH) / 2, cy + (ny * TIE_LENGTH) / 2);
           this.graphics.stroke({ width: 1, color: RAILWAY_COLOR });
         }
+      }
+    }
+  }
+
+  private drawBridges(hexes: { q: number; r: number }[]): void {
+    for (const hex of hexes) {
+      const cell = this.gameMap.cells.get(HexGrid.key(hex));
+      if (cell?.terrain === TerrainType.River) {
+        const px = HexRenderer.hexToPixel(hex);
+        this.graphics.rect(
+          px.x - BRIDGE_WIDTH / 2,
+          px.y - BRIDGE_HEIGHT / 2,
+          BRIDGE_WIDTH,
+          BRIDGE_HEIGHT,
+        );
+        this.graphics.fill({ color: BRIDGE_COLOR });
       }
     }
   }
