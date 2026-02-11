@@ -1,3 +1,4 @@
+import { Profiler } from '../Profiler';
 import { HexGrid } from './HexGrid';
 import type { HexCell, HexCoord, RoadParams, RoutePath, UrbanCluster } from './types';
 import { TerrainType } from './types';
@@ -60,46 +61,51 @@ export class RoadGenerator {
     urbanClusters: UrbanCluster[],
   ): { roads: RoutePath[]; railways: RoutePath[] } {
     const terrainCost = RoadGenerator.buildTerrainCost(params);
+    const prof = new Profiler('RoadGenerator detail');
 
     const majorCenters = urbanClusters
       .filter((c) => c.tier === 'metropolis' || c.tier === 'city')
       .map((c) => c.center);
     const towns = urbanClusters.filter((c) => c.tier === 'town').map((c) => c.center);
 
+    console.log(
+      `  Road input: ${majorCenters.length} major centers, ${towns.length} towns → ${(majorCenters.length * (majorCenters.length - 1)) / 2} A* pairs`,
+    );
+
     // --- Pairwise A* between all major center pairs ---
-    const pairwiseRoutes = RoadGenerator.computePairwiseRoutes(
-      majorCenters,
-      cells,
-      width,
-      height,
-      terrainCost,
+    const pairwiseRoutes = prof.measure('Pairwise A* (all major pairs)', () =>
+      RoadGenerator.computePairwiseRoutes(majorCenters, cells, width, height, terrainCost),
     );
 
     // --- Railways ---
-    const railways = RoadGenerator.buildRailways(
-      majorCenters,
-      towns,
-      pairwiseRoutes,
-      params,
-      cells,
-      width,
-      height,
-      terrainCost,
+    const railways = prof.measure('Railway construction', () =>
+      RoadGenerator.buildRailways(
+        majorCenters,
+        towns,
+        pairwiseRoutes,
+        params,
+        cells,
+        width,
+        height,
+        terrainCost,
+      ),
     );
 
     // --- Roads ---
-    const roads = RoadGenerator.buildRoads(
-      majorCenters,
-      towns,
-      pairwiseRoutes,
-      params,
-      cells,
-      width,
-      height,
-      terrainCost,
+    const roads = prof.measure('Road construction', () =>
+      RoadGenerator.buildRoads(
+        majorCenters,
+        towns,
+        pairwiseRoutes,
+        params,
+        cells,
+        width,
+        height,
+        terrainCost,
+      ),
     );
 
-    return {
+    const result = prof.measure('Merge paths into network', () => ({
       roads: RoadGenerator.mergePathsIntoNetwork(roads.map((r) => r.hexes)).map((hexes) => ({
         hexes,
         type: 'road' as const,
@@ -108,7 +114,11 @@ export class RoadGenerator {
         hexes,
         type: 'railway' as const,
       })),
-    };
+    }));
+
+    prof.log();
+
+    return result;
   }
 
   // ---------------------------------------------------------------------------
@@ -342,6 +352,8 @@ export class RoadGenerator {
   // Pairwise A* between all major center pairs
   // ---------------------------------------------------------------------------
 
+  private static readonly MAX_PAIRWISE_NEIGHBORS = 8;
+
   private static computePairwiseRoutes(
     centers: HexCoord[],
     cells: Map<string, HexCell>,
@@ -350,14 +362,37 @@ export class RoadGenerator {
     terrainCost: Record<TerrainType, number>,
   ): PairwiseRoute[] {
     const routes: PairwiseRoute[] = [];
+    const k = Math.min(RoadGenerator.MAX_PAIRWISE_NEIGHBORS, centers.length - 1);
+    const computed = new Set<string>();
 
     for (let i = 0; i < centers.length; i++) {
-      for (let j = i + 1; j < centers.length; j++) {
-        const path = RoadGenerator.astar(centers[i], centers[j], cells, width, height, terrainCost);
+      // Find K nearest centers by hex distance
+      const nearest: Array<{ j: number; dist: number }> = [];
+      for (let j = 0; j < centers.length; j++) {
+        if (i === j) continue;
+        nearest.push({ j, dist: HexGrid.distance(centers[i], centers[j]) });
+      }
+      nearest.sort((a, b) => a.dist - b.dist);
+
+      for (let n = 0; n < k; n++) {
+        const j = nearest[n].j;
+        const pairKey = i < j ? `${i}-${j}` : `${j}-${i}`;
+        if (computed.has(pairKey)) continue;
+        computed.add(pairKey);
+
+        const [from, to] = i < j ? [i, j] : [j, i];
+        const path = RoadGenerator.astar(
+          centers[from],
+          centers[to],
+          cells,
+          width,
+          height,
+          terrainCost,
+        );
         if (path) {
           routes.push({
-            from: i,
-            to: j,
+            from,
+            to,
             cost: RoadGenerator.pathCost(path, cells, terrainCost),
             path,
           });

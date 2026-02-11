@@ -54,7 +54,7 @@ export class UrbanGenerator {
 
     for (const tierConfig of TIERS) {
       const baseCount = params[tierConfig.densityKey];
-      const count = Math.max(1, Math.round(baseCount * (totalHexes / 1200)));
+      const count = Math.max(1, Math.round(baseCount * Math.sqrt(totalHexes / 1200)));
       const minSpacing = params[tierConfig.spacingKey];
 
       const seeds = UrbanGenerator.selectSeeds(scored, allSeeds, count, minSpacing);

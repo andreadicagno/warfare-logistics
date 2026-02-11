@@ -1,5 +1,6 @@
 import { HexGrid } from '@core/map/HexGrid';
 import type { GameMap, HexCoord } from '@core/map/types';
+import { Profiler } from '@core/Profiler';
 import { type Application, Container } from 'pixi.js';
 import { Camera } from './Camera';
 import { HexRenderer } from './HexRenderer';
@@ -18,13 +19,15 @@ export class MapRenderer {
   private camera: Camera;
   private terrainLayer: TerrainLayer;
   private routeLayer: RouteLayer;
-  private routeAnimator: RouteAnimator;
+  private routeAnimator!: RouteAnimator;
   private supplyHubLayer: SupplyHubLayer;
   private selectionLayer: SelectionLayer;
   private boundOnFrame: () => void;
   private disabledLayers = new Set<LayerName>();
 
   constructor(app: Application, gameMap: GameMap) {
+    const prof = new Profiler('MapRenderer');
+
     this.app = app;
     this.gameMap = gameMap;
 
@@ -44,9 +47,9 @@ export class MapRenderer {
     this.worldContainer.addChild(this.selectionLayer.container);
 
     const bounds = this.camera.getVisibleBounds();
-    this.terrainLayer.build(bounds);
-    this.routeLayer.build(bounds);
-    this.supplyHubLayer.build(bounds);
+    prof.measure('TerrainLayer.build()', () => this.terrainLayer.build(bounds));
+    prof.measure('RouteLayer.build()', () => this.routeLayer.build(bounds));
+    prof.measure('SupplyHubLayer.build()', () => this.supplyHubLayer.build(bounds));
 
     const centerCol = Math.floor(gameMap.width / 2);
     const centerRow = Math.floor(gameMap.height / 2);
@@ -63,12 +66,14 @@ export class MapRenderer {
     this.routeLayer.build(newBounds);
     this.supplyHubLayer.build(newBounds);
 
-    this.routeAnimator = new RouteAnimator(() => this.camera.scale);
-    this.worldContainer.addChild(this.routeAnimator.container);
-    this.routeAnimator.init(
-      this.routeLayer.computedRoadSplines,
-      this.routeLayer.computedRailwaySplines,
-    );
+    prof.measure('RouteAnimator.init()', () => {
+      this.routeAnimator = new RouteAnimator(() => this.camera.scale);
+      this.worldContainer.addChild(this.routeAnimator.container);
+      this.routeAnimator.init(
+        this.routeLayer.computedRoadSplines,
+        this.routeLayer.computedRailwaySplines,
+      );
+    });
 
     this.camera.attach();
 
@@ -76,6 +81,8 @@ export class MapRenderer {
 
     this.boundOnFrame = this.onFrame.bind(this);
     this.app.ticker.add(this.boundOnFrame);
+
+    prof.log();
   }
 
   get cameraRef(): Camera {

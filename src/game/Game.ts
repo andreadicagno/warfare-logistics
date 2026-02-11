@@ -1,6 +1,7 @@
 import { MapGenerator } from '@core/map/MapGenerator';
 import type { GameMap, GenerationParams, HexCell } from '@core/map/types';
 import { DEFAULT_GENERATION_PARAMS } from '@core/map/types';
+import { Profiler } from '@core/Profiler';
 import type { DebugInfo } from '@ui/DebugOverlay';
 import { DebugOverlay } from '@ui/DebugOverlay';
 import { KeyboardController } from '@ui/KeyboardController';
@@ -49,10 +50,18 @@ export class Game {
   }
 
   private generateMap(params: GenerationParams): void {
+    const prof = new Profiler('Total generation');
+
     this.mapRenderer?.destroy();
-    this.map = MapGenerator.generate(params);
-    this.mapRenderer = new MapRenderer(this.app, this.map);
+
+    this.map = prof.measure('MapGenerator.generate()', () => MapGenerator.generate(params));
+    this.mapRenderer = prof.measure(
+      'MapRenderer (build layers)',
+      () => new MapRenderer(this.app, this.map!),
+    );
     this.currentParams = params;
+
+    prof.log();
   }
 
   private onGenerate(params: GenerationParams): void {
