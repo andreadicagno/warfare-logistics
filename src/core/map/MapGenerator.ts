@@ -5,7 +5,7 @@ import { SmoothingPass } from './SmoothingPass';
 import { SettlementPlacer } from './SettlementPlacer';
 import { RoadGenerator } from './RoadGenerator';
 
-const MAP_SIZES: Record<string, { width: number; height: number }> = {
+const MAP_SIZES: Record<MapConfig['mapSize'], { width: number; height: number }> = {
   small: { width: 40, height: 30 },
   medium: { width: 60, height: 45 },
   large: { width: 80, height: 60 },

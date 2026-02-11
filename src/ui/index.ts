@@ -8,7 +8,6 @@
  * - Notifications
  */
 
-// Exports will be added as we implement:
-// export { MapRenderer } from './MapRenderer';
+export { MapRenderer } from './MapRenderer';
 // export { DetailPanel } from './DetailPanel';
 // export { NotificationSystem } from './NotificationSystem';

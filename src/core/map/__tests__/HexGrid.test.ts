@@ -86,6 +86,76 @@ describe('HexGrid', () => {
     });
   });
 
+  describe('edgeDirection', () => {
+    it('returns 0 for east neighbor', () => {
+      expect(HexGrid.edgeDirection({ q: 0, r: 0 }, { q: 1, r: 0 })).toBe(0);
+    });
+
+    it('returns 5 for southeast neighbor', () => {
+      expect(HexGrid.edgeDirection({ q: 0, r: 0 }, { q: 0, r: 1 })).toBe(5);
+    });
+
+    it('returns 3 for west neighbor', () => {
+      expect(HexGrid.edgeDirection({ q: 0, r: 0 }, { q: -1, r: 0 })).toBe(3);
+    });
+
+    it('returns null for non-adjacent hexes', () => {
+      expect(HexGrid.edgeDirection({ q: 0, r: 0 }, { q: 5, r: 5 })).toBeNull();
+    });
+  });
+
+  describe('oppositeEdge', () => {
+    it('returns 3 for edge 0 (E→W)', () => {
+      expect(HexGrid.oppositeEdge(0)).toBe(3);
+    });
+
+    it('returns 0 for edge 3 (W→E)', () => {
+      expect(HexGrid.oppositeEdge(3)).toBe(0);
+    });
+
+    it('returns 4 for edge 1 (NE→SW)', () => {
+      expect(HexGrid.oppositeEdge(1)).toBe(4);
+    });
+
+    it('returns 2 for edge 5 (SE→NW)', () => {
+      expect(HexGrid.oppositeEdge(5)).toBe(2);
+    });
+  });
+
+  describe('line', () => {
+    it('returns single hex for same start and end', () => {
+      const result = HexGrid.line({ q: 3, r: 4 }, { q: 3, r: 4 });
+      expect(result).toEqual([{ q: 3, r: 4 }]);
+    });
+
+    it('returns two hexes for adjacent hexes', () => {
+      const result = HexGrid.line({ q: 0, r: 0 }, { q: 1, r: 0 });
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ q: 0, r: 0 });
+      expect(result[1]).toEqual({ q: 1, r: 0 });
+    });
+
+    it('returns correct length for longer lines', () => {
+      const result = HexGrid.line({ q: 0, r: 0 }, { q: 4, r: 0 });
+      expect(result).toHaveLength(5); // distance 4 → 5 hexes
+    });
+
+    it('all consecutive hexes are adjacent', () => {
+      const result = HexGrid.line({ q: 0, r: 0 }, { q: 3, r: -2 });
+      for (let i = 1; i < result.length; i++) {
+        expect(HexGrid.distance(result[i - 1], result[i])).toBe(1);
+      }
+    });
+
+    it('starts and ends at the correct hexes', () => {
+      const a: HexCoord = { q: 2, r: 5 };
+      const b: HexCoord = { q: 7, r: 1 };
+      const result = HexGrid.line(a, b);
+      expect(result[0]).toEqual(a);
+      expect(result[result.length - 1]).toEqual(b);
+    });
+  });
+
   describe('inBounds', () => {
     it('returns true for valid coordinates', () => {
       expect(HexGrid.inBounds({ q: 5, r: 5 }, 40, 30)).toBe(true);

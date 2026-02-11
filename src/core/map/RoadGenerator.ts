@@ -1,8 +1,8 @@
-import type { HexCell, HexCoord, RoutePath } from './types';
+import type { HexCell, HexCoord, MapConfig, RoutePath } from './types';
 import { TerrainType, SettlementType } from './types';
 import { HexGrid } from './HexGrid';
 
-type Infrastructure = 'none' | 'basic' | 'developed';
+type Infrastructure = MapConfig['initialInfrastructure'];
 
 const TERRAIN_COST: Record<TerrainType, number> = {
   [TerrainType.Plains]: 1,
@@ -101,7 +101,7 @@ export class RoadGenerator {
     return { roads, railways };
   }
 
-  /** A* pathfinding with terrain costs */
+  /** A* pathfinding with terrain costs (binary heap open set) */
   static astar(
     start: HexCoord,
     goal: HexCoord,
@@ -112,35 +112,32 @@ export class RoadGenerator {
     const startKey = HexGrid.key(start);
     const goalKey = HexGrid.key(goal);
 
-    const openSet = new Map<string, { coord: HexCoord; f: number }>();
-    openSet.set(startKey, { coord: start, f: HexGrid.distance(start, goal) });
+    const heap = new MinHeap();
+    heap.push(startKey, HexGrid.distance(start, goal));
 
     const gScore = new Map<string, number>();
     gScore.set(startKey, 0);
 
     const cameFrom = new Map<string, string>();
+    const closed = new Set<string>();
 
-    while (openSet.size > 0) {
-      let currentKey = '';
-      let currentF = Infinity;
-      for (const [key, node] of openSet) {
-        if (node.f < currentF) {
-          currentF = node.f;
-          currentKey = key;
-        }
-      }
-
+    while (heap.size > 0) {
+      const currentKey = heap.pop()!;
       if (currentKey === goalKey) {
         return RoadGenerator.reconstructPath(cameFrom, currentKey, cells);
       }
 
-      const current = openSet.get(currentKey)!.coord;
-      openSet.delete(currentKey);
+      if (closed.has(currentKey)) continue;
+      closed.add(currentKey);
 
-      for (const neighbor of HexGrid.neighbors(current)) {
+      const currentCell = cells.get(currentKey)!;
+
+      for (const neighbor of HexGrid.neighbors(currentCell.coord)) {
         if (!HexGrid.inBounds(neighbor, width, height)) continue;
 
         const neighborKey = HexGrid.key(neighbor);
+        if (closed.has(neighborKey)) continue;
+
         const neighborCell = cells.get(neighborKey);
         if (!neighborCell) continue;
 
@@ -153,7 +150,7 @@ export class RoadGenerator {
           cameFrom.set(neighborKey, currentKey);
           gScore.set(neighborKey, tentativeG);
           const f = tentativeG + HexGrid.distance(neighbor, goal);
-          openSet.set(neighborKey, { coord: neighbor, f });
+          heap.push(neighborKey, f);
         }
       }
     }
@@ -180,5 +177,53 @@ export class RoadGenerator {
     const keyA = HexGrid.key(a);
     const keyB = HexGrid.key(b);
     return keyA < keyB ? `${keyA}|${keyB}` : `${keyB}|${keyA}`;
+  }
+}
+
+/** Binary min-heap keyed by f-score for A* open set */
+class MinHeap {
+  private data: Array<{ key: string; f: number }> = [];
+
+  get size(): number {
+    return this.data.length;
+  }
+
+  push(key: string, f: number): void {
+    this.data.push({ key, f });
+    this.bubbleUp(this.data.length - 1);
+  }
+
+  pop(): string | undefined {
+    if (this.data.length === 0) return undefined;
+    const top = this.data[0];
+    const last = this.data.pop()!;
+    if (this.data.length > 0) {
+      this.data[0] = last;
+      this.sinkDown(0);
+    }
+    return top.key;
+  }
+
+  private bubbleUp(i: number): void {
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (this.data[i].f >= this.data[parent].f) break;
+      [this.data[i], this.data[parent]] = [this.data[parent], this.data[i]];
+      i = parent;
+    }
+  }
+
+  private sinkDown(i: number): void {
+    const n = this.data.length;
+    while (true) {
+      let smallest = i;
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+      if (left < n && this.data[left].f < this.data[smallest].f) smallest = left;
+      if (right < n && this.data[right].f < this.data[smallest].f) smallest = right;
+      if (smallest === i) break;
+      [this.data[i], this.data[smallest]] = [this.data[smallest], this.data[i]];
+      i = smallest;
+    }
   }
 }

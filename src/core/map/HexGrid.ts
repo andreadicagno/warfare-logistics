@@ -88,6 +88,38 @@ export class HexGrid {
     return coord.q >= 0 && coord.q < width && coord.r >= 0 && coord.r < height;
   }
 
+  /** Hexes along a straight line from a to b (inclusive) using linear interpolation */
+  static line(a: HexCoord, b: HexCoord): HexCoord[] {
+    const n = HexGrid.distance(a, b);
+    if (n === 0) return [{ q: a.q, r: a.r }];
+
+    const results: HexCoord[] = [];
+    // Use cube coordinates for interpolation
+    const aS = -a.q - a.r;
+    const bS = -b.q - b.r;
+
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const fq = a.q + (b.q - a.q) * t;
+      const fr = a.r + (b.r - a.r) * t;
+      const fs = aS + (bS - aS) * t;
+      // Round cube coordinates
+      let rq = Math.round(fq);
+      let rr = Math.round(fr);
+      const rs = Math.round(fs);
+      const dq = Math.abs(rq - fq);
+      const dr = Math.abs(rr - fr);
+      const ds = Math.abs(rs - fs);
+      if (dq > dr && dq > ds) {
+        rq = -rr - rs;
+      } else if (dr > ds) {
+        rr = -rq - rs;
+      }
+      results.push({ q: rq, r: rr });
+    }
+    return results;
+  }
+
   static edgeDirection(from: HexCoord, to: HexCoord): number | null {
     const dq = to.q - from.q;
     const dr = to.r - from.r;
