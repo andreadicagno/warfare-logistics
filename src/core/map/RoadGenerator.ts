@@ -28,7 +28,7 @@ export class RoadGenerator {
 
     const roads: RoutePath[] = [];
     const usedPairs = new Set<string>();
-    const roadEdges = new Set<string>();
+    const existingEdges = new Map<string, 'road' | 'railway'>();
 
     // Connect each minor center to nearest major center
     for (const town of minorCenters) {
@@ -51,12 +51,14 @@ export class RoadGenerator {
             width,
             height,
             terrainCost,
-            roadEdges,
+            existingEdges,
+            'road',
+            params,
           );
           if (path) {
             roads.push({ hexes: path, type: 'road' });
             usedPairs.add(pairKey);
-            RoadGenerator.addPathEdges(path, roadEdges);
+            RoadGenerator.addPathEdges(path, existingEdges, 'road');
           }
         }
       }
@@ -75,12 +77,14 @@ export class RoadGenerator {
               width,
               height,
               terrainCost,
-              roadEdges,
+              existingEdges,
+              'road',
+              params,
             );
             if (path) {
               roads.push({ hexes: path, type: 'road' });
               usedPairs.add(pairKey);
-              RoadGenerator.addPathEdges(path, roadEdges);
+              RoadGenerator.addPathEdges(path, existingEdges, 'road');
             }
           }
         }
@@ -105,7 +109,6 @@ export class RoadGenerator {
       const railCount =
         params.infrastructure === 'basic' ? Math.min(2, cityPairs.length) : cityPairs.length;
 
-      const railEdges = new Set<string>();
       for (let i = 0; i < railCount; i++) {
         const path = RoadGenerator.astar(
           cityPairs[i].from,
@@ -114,11 +117,13 @@ export class RoadGenerator {
           width,
           height,
           terrainCost,
-          railEdges,
+          existingEdges,
+          'railway',
+          params,
         );
         if (path) {
           railways.push({ hexes: path, type: 'railway' });
-          RoadGenerator.addPathEdges(path, railEdges);
+          RoadGenerator.addPathEdges(path, existingEdges, 'railway');
         }
       }
     }
@@ -214,9 +219,6 @@ export class RoadGenerator {
     return result;
   }
 
-  /** Cost of traversing an edge that already has a road/railway built. */
-  private static readonly EXISTING_ROUTE_COST = 0.1;
-
   static astar(
     start: HexCoord,
     goal: HexCoord,
@@ -224,7 +226,9 @@ export class RoadGenerator {
     width: number,
     height: number,
     terrainCost: Record<TerrainType, number>,
-    existingEdges: Set<string> = new Set(),
+    existingEdges: Map<string, 'road' | 'railway'>,
+    routeType: 'road' | 'railway',
+    params: RoadParams,
   ): HexCoord[] | null {
     const startKey = HexGrid.key(start);
     const goalKey = HexGrid.key(goal);
@@ -261,9 +265,15 @@ export class RoadGenerator {
         const baseCost = terrainCost[neighborCell.terrain];
         if (!Number.isFinite(baseCost)) continue;
 
-        // Prefer reusing existing roads/railways — much cheaper than building new
+        // Prefer reusing existing routes of the same type — much cheaper than building new
         const ek = RoadGenerator.edgeKey(currentKey, neighborKey);
-        const cost = existingEdges.has(ek) ? RoadGenerator.EXISTING_ROUTE_COST : baseCost;
+        const edgeType = existingEdges.get(ek);
+        const cost =
+          edgeType !== undefined && edgeType === routeType
+            ? routeType === 'road'
+              ? params.roadReuseCost
+              : params.railwayReuseCost
+            : baseCost;
 
         const tentativeG = (gScore.get(currentKey) ?? Infinity) + cost;
 
@@ -302,9 +312,13 @@ export class RoadGenerator {
     return RoadGenerator.edgeKey(HexGrid.key(a), HexGrid.key(b));
   }
 
-  private static addPathEdges(path: HexCoord[], edges: Set<string>): void {
+  private static addPathEdges(
+    path: HexCoord[],
+    edges: Map<string, 'road' | 'railway'>,
+    routeType: 'road' | 'railway',
+  ): void {
     for (let i = 0; i < path.length - 1; i++) {
-      edges.add(RoadGenerator.edgeKey(HexGrid.key(path[i]), HexGrid.key(path[i + 1])));
+      edges.set(RoadGenerator.edgeKey(HexGrid.key(path[i]), HexGrid.key(path[i + 1])), routeType);
     }
   }
 }

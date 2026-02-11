@@ -105,6 +105,8 @@ export class Sidebar {
   private riverCost!: SliderRow;
   private urbanCost!: SliderRow;
   private cityConnectionDistance!: SliderRow;
+  private roadReuseCost!: SliderRow;
+  private railwayReuseCost!: SliderRow;
 
   constructor(
     parent: HTMLElement,
@@ -279,6 +281,8 @@ export class Sidebar {
         riverCost: this.riverCost.getValue(),
         urbanCost: this.urbanCost.getValue(),
         cityConnectionDistance: this.cityConnectionDistance.getValue(),
+        roadReuseCost: this.roadReuseCost.getValue(),
+        railwayReuseCost: this.railwayReuseCost.getValue(),
       },
     };
   }
@@ -342,6 +346,8 @@ export class Sidebar {
     this.riverCost.setValue(params.roads.riverCost);
     this.urbanCost.setValue(params.roads.urbanCost);
     this.cityConnectionDistance.setValue(params.roads.cityConnectionDistance);
+    this.roadReuseCost.setValue(params.roads.roadReuseCost);
+    this.railwayReuseCost.setValue(params.roads.railwayReuseCost);
 
     this.ignorePresetChange = false;
     this.detectPreset();
@@ -684,7 +690,11 @@ export class Sidebar {
   private buildRoadsSection(parent: HTMLElement): void {
     const { content } = this.createSection('Roads', parent, false);
 
-    const infraRow = this.createSelectRow('Infrastructure', ['none', 'basic', 'developed'], 'none');
+    const infraRow = this.createSelectRow(
+      'Infrastructure',
+      ['none', 'basic', 'developed'],
+      'developed',
+    );
     this.infrastructureSelect = infraRow.select;
     this.infrastructureSelect.addEventListener('change', () => this.markCustomPreset());
     content.appendChild(infraRow.container);
@@ -703,6 +713,10 @@ export class Sidebar {
     content.appendChild(this.urbanCost.container);
     this.cityConnectionDistance = this.createSliderRow('City Connection Dist', 5, 50, 1, 20);
     content.appendChild(this.cityConnectionDistance.container);
+    this.roadReuseCost = this.createSliderRow('Road Reuse Cost', 0.01, 1, 0.01, 0.1);
+    content.appendChild(this.roadReuseCost.container);
+    this.railwayReuseCost = this.createSliderRow('Railway Reuse Cost', 0.01, 1, 0.01, 0.1);
+    content.appendChild(this.railwayReuseCost.container);
   }
 
   // ---------------------------------------------------------------------------

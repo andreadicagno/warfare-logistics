@@ -97,8 +97,10 @@ src/
 │   │   ├── TerrainLayer.ts
 │   │   ├── RiverLayer.ts
 │   │   ├── RouteLayer.ts
-│   │   ├── SettlementLayer.ts
+│   │   ├── SupplyHubLayer.ts
 │   │   └── SelectionLayer.ts
+│   ├── Sidebar.ts             # Generation params sidebar with layer toggles
+│   ├── KeyboardController.ts  # Keyboard input handling
 │   └── __tests__/           # UI unit tests
 └── data/
     ├── types.ts             # Game-level types (resources, facilities — stubs)
@@ -136,6 +138,8 @@ Map generation pipeline (hex grid → terrain → smoothing → rivers → roads
 
 ## Gotchas
 
+- **Rendering perf**: All layers build geometry once and cache it (`built` flag). Never rebuild on camera move — PixiJS handles viewport clipping on GPU. New layers must follow this pattern.
+- **Wiring**: `Game.ts` coordinates UI components (MapRenderer, DebugOverlay, Sidebar). Callbacks flow: Sidebar → Game → MapRenderer.
 - **PixiJS v8**: API differs significantly from v7. Use `new Application()` + `await app.init()`, not constructor options. `Graphics` uses method chaining (`fill()`, `stroke()`), not `beginFill/endFill`.
 - **Biome v2**: Config syntax differs from v1 — see `biome.json` for working config. Schema version must match installed CLI version.
 - **Hex coordinate system**: Flat-top axial (q, r). Edge indices 0-5 clockwise from east. `HexGrid` is a static utility class.

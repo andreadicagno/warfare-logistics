@@ -175,6 +175,9 @@ describe('RoadGenerator', () => {
         3,
         3,
         defaultTerrainCost,
+        new Map(),
+        'road',
+        defaultRoadParams,
       );
       expect(path).not.toBeNull();
       expect(path![0]).toEqual({ q: 0, r: 0 });
@@ -213,6 +216,9 @@ describe('RoadGenerator', () => {
         5,
         5,
         defaultTerrainCost,
+        new Map(),
+        'road',
+        defaultRoadParams,
       );
       expect(path).toBeNull();
     });
