@@ -9,7 +9,7 @@ const ALLIED_COLOR = 0x4488cc;
 const ENEMY_COLOR = 0xcc4444;
 const ALPHA_MAX = 0.45;
 const ALPHA_MIN = 0.08;
-const MAX_GRADIENT_DISTANCE = 6; // hex cells — beyond this, no overlay
+const GRADIENT_DISTANCE = 6; // gradient from ALPHA_MAX to ALPHA_MIN over 6 hexes, then ALPHA_MIN
 
 export class TerritoryLayer {
   readonly container = new Container();
@@ -46,9 +46,8 @@ export class TerritoryLayer {
       const verts = HexRenderer.vertices(px.x, px.y);
       const flat = verts.flatMap((v) => [v.x, v.y]);
 
-      const rawDist = distanceMap.get(key) ?? MAX_GRADIENT_DISTANCE + 1;
-      if (rawDist > MAX_GRADIENT_DISTANCE) continue; // no overlay beyond 6 hexes
-      const t = rawDist / MAX_GRADIENT_DISTANCE; // 0 at front, 1 at 6 hexes
+      const rawDist = distanceMap.get(key) ?? GRADIENT_DISTANCE;
+      const t = Math.min(rawDist / GRADIENT_DISTANCE, 1); // 0 at front, 1 at 6+ hexes
       const alpha = ALPHA_MAX - t * (ALPHA_MAX - ALPHA_MIN);
       const color = faction === 'allied' ? ALLIED_COLOR : ENEMY_COLOR;
       this.graphics.poly(flat);
@@ -72,8 +71,8 @@ export class TerritoryLayer {
   }
 
   /**
-   * BFS from all front-line-adjacent hexes outward, up to MAX_GRADIENT_DISTANCE.
-   * Returns a map of hex key → raw hex distance (0 = front, up to MAX_GRADIENT_DISTANCE).
+   * BFS from all front-line-adjacent hexes outward.
+   * Returns a map of hex key → raw hex distance from front (0, 1, 2, ...).
    */
   private computeFrontDistances(): Map<string, number> {
     const distances = new Map<string, number>();
@@ -98,8 +97,6 @@ export class TerritoryLayer {
     while (head < queue.length) {
       const key = queue[head++];
       const dist = distances.get(key)!;
-      if (dist >= MAX_GRADIENT_DISTANCE) continue; // stop expanding beyond limit
-
       const parts = key.split(',');
       const coord: HexCoord = { q: Number(parts[0]), r: Number(parts[1]) };
 
