@@ -2,30 +2,36 @@ import { describe, expect, it } from 'vitest';
 import { HexGrid } from '../HexGrid';
 import { RiverGenerator } from '../RiverGenerator';
 import { TerrainGenerator } from '../TerrainGenerator';
-import { TerrainType } from '../types';
+import { DEFAULT_GENERATION_PARAMS, TerrainType } from '../types';
 
 describe('RiverGenerator', () => {
   function makeMap() {
-    return TerrainGenerator.generate(40, 30, 'mixed', 42);
+    return TerrainGenerator.generate(
+      40,
+      30,
+      DEFAULT_GENERATION_PARAMS.terrain,
+      DEFAULT_GENERATION_PARAMS.seaSides,
+      42,
+    );
   }
 
   it('produces 3-5 rivers (river cell groups)', () => {
     const cells = makeMap();
-    const riverCount = RiverGenerator.generate(cells, 40, 30, 42);
+    const riverCount = RiverGenerator.generate(cells, 40, 30, 42, DEFAULT_GENERATION_PARAMS.rivers);
     expect(riverCount).toBeGreaterThanOrEqual(3);
     expect(riverCount).toBeLessThanOrEqual(5);
   });
 
   it('creates River terrain cells', () => {
     const cells = makeMap();
-    RiverGenerator.generate(cells, 40, 30, 42);
+    RiverGenerator.generate(cells, 40, 30, 42, DEFAULT_GENERATION_PARAMS.rivers);
     const riverCells = [...cells.values()].filter((c) => c.terrain === TerrainType.River);
     expect(riverCells.length).toBeGreaterThan(0);
   });
 
   it('river sources start at high elevation', () => {
     const cells = makeMap();
-    RiverGenerator.generate(cells, 40, 30, 42);
+    RiverGenerator.generate(cells, 40, 30, 42, DEFAULT_GENERATION_PARAMS.rivers);
     const riverCells = [...cells.values()].filter((c) => c.terrain === TerrainType.River);
     const maxElev = Math.max(...riverCells.map((c) => c.elevation));
     expect(maxElev).toBeGreaterThan(0.5);
@@ -33,7 +39,7 @@ describe('RiverGenerator', () => {
 
   it('rivers terminate at Water, map edge, or another River', () => {
     const cells = makeMap();
-    RiverGenerator.generate(cells, 40, 30, 42);
+    RiverGenerator.generate(cells, 40, 30, 42, DEFAULT_GENERATION_PARAMS.rivers);
     const riverCells = [...cells.values()].filter((c) => c.terrain === TerrainType.River);
     for (const rc of riverCells) {
       const neighbors = HexGrid.neighbors(rc.coord);
@@ -48,7 +54,7 @@ describe('RiverGenerator', () => {
 
   it('wide rivers have navigable cells', () => {
     const cells = makeMap();
-    RiverGenerator.generate(cells, 40, 30, 42);
+    RiverGenerator.generate(cells, 40, 30, 42, DEFAULT_GENERATION_PARAMS.rivers);
     const nonRiverNavigable = [...cells.values()].filter(
       (c) => c.navigable && c.terrain !== TerrainType.River,
     );
@@ -57,9 +63,15 @@ describe('RiverGenerator', () => {
 
   it('is deterministic', () => {
     const cells1 = makeMap();
-    RiverGenerator.generate(cells1, 40, 30, 42);
-    const cells2 = TerrainGenerator.generate(40, 30, 'mixed', 42);
-    RiverGenerator.generate(cells2, 40, 30, 42);
+    RiverGenerator.generate(cells1, 40, 30, 42, DEFAULT_GENERATION_PARAMS.rivers);
+    const cells2 = TerrainGenerator.generate(
+      40,
+      30,
+      DEFAULT_GENERATION_PARAMS.terrain,
+      DEFAULT_GENERATION_PARAMS.seaSides,
+      42,
+    );
+    RiverGenerator.generate(cells2, 40, 30, 42, DEFAULT_GENERATION_PARAMS.rivers);
     const rivers1 = [...cells1.values()].filter((c) => c.terrain === TerrainType.River);
     const rivers2 = [...cells2.values()].filter((c) => c.terrain === TerrainType.River);
     expect(rivers1.length).toBe(rivers2.length);
@@ -67,8 +79,14 @@ describe('RiverGenerator', () => {
 
   it('generates termination lakes when rivers get stuck', () => {
     const cells = makeMap();
-    RiverGenerator.generate(cells, 40, 30, 42);
-    const freshCells = TerrainGenerator.generate(40, 30, 'mixed', 42);
+    RiverGenerator.generate(cells, 40, 30, 42, DEFAULT_GENERATION_PARAMS.rivers);
+    const freshCells = TerrainGenerator.generate(
+      40,
+      30,
+      DEFAULT_GENERATION_PARAMS.terrain,
+      DEFAULT_GENERATION_PARAMS.seaSides,
+      42,
+    );
     const originalWater = [...freshCells.values()].filter(
       (c) => c.terrain === TerrainType.Water,
     ).length;

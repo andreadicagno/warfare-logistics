@@ -1,17 +1,7 @@
 import { HexGrid } from './HexGrid';
 import { mulberry32 } from './rng';
-import type { HexCell, HexCoord } from './types';
+import type { HexCell, HexCoord, RiverParams } from './types';
 import { TerrainType } from './types';
-
-const MIN_RIVER_LENGTH = 3;
-const MIN_SOURCES = 3;
-const MAX_SOURCES = 5;
-const SOURCE_MIN_ELEVATION = 0.55;
-const SOURCE_MIN_SPACING = 5;
-const WIDE_RIVER_MIN_LENGTH = 8;
-const WIDE_RIVER_LOWER_FRACTION = 0.6;
-const LAKE_MIN_SIZE = 3;
-const LAKE_MAX_SIZE = 6;
 
 export class RiverGenerator {
   /**
@@ -24,11 +14,12 @@ export class RiverGenerator {
     width: number,
     height: number,
     seed: number,
+    params: RiverParams,
   ): number {
     const rng = mulberry32(seed + 1000);
 
     // 1. Select river sources
-    const sources = RiverGenerator.selectSources(cells, width, height, rng);
+    const sources = RiverGenerator.selectSources(cells, width, height, rng, params);
 
     // 2. Trace rivers via greedy downhill flow
     const rivers: HexCoord[][] = [];
@@ -36,7 +27,7 @@ export class RiverGenerator {
 
     for (const source of sources) {
       const path = RiverGenerator.traceRiver(cells, source, width, height, allRiverKeys);
-      if (path.length >= MIN_RIVER_LENGTH) {
+      if (path.length >= params.minRiverLength) {
         rivers.push(path);
         for (const coord of path) {
           allRiverKeys.add(HexGrid.key(coord));
@@ -63,31 +54,32 @@ export class RiverGenerator {
       }
 
       // Widen long rivers
-      if (path.length >= WIDE_RIVER_MIN_LENGTH) {
-        RiverGenerator.widenRiver(cells, path, allRiverKeys);
+      if (path.length >= params.wideRiverMinLength) {
+        RiverGenerator.widenRiver(cells, path, allRiverKeys, params);
       }
 
       // Generate termination lake if river didn't reach a valid terminus
       if (!reachedValidTerminus) {
-        RiverGenerator.generateLake(cells, path[path.length - 1], width, height, rng);
+        RiverGenerator.generateLake(cells, path[path.length - 1], width, height, rng, params);
       }
     }
 
     return rivers.length;
   }
 
-  /** Select 3-5 source cells at high elevation, spaced apart */
+  /** Select source cells at high elevation, spaced apart */
   private static selectSources(
     cells: Map<string, HexCell>,
     _width: number,
     _height: number,
     rng: () => number,
+    params: RiverParams,
   ): HexCoord[] {
     // Gather all candidate cells: high elevation, not Water or Marsh
     const candidates: HexCell[] = [];
     for (const cell of cells.values()) {
       if (
-        cell.elevation > SOURCE_MIN_ELEVATION &&
+        cell.elevation > params.sourceMinElevation &&
         cell.terrain !== TerrainType.Water &&
         cell.terrain !== TerrainType.Marsh
       ) {
@@ -99,14 +91,15 @@ export class RiverGenerator {
     candidates.sort((a, b) => b.elevation - a.elevation);
 
     // Pick sources with minimum spacing
-    const numSources = MIN_SOURCES + Math.floor(rng() * (MAX_SOURCES - MIN_SOURCES + 1));
+    const numSources =
+      params.minSources + Math.floor(rng() * (params.maxSources - params.minSources + 1));
     const sources: HexCoord[] = [];
 
     for (const candidate of candidates) {
       if (sources.length >= numSources) break;
 
       const tooClose = sources.some(
-        (s) => HexGrid.distance(s, candidate.coord) < SOURCE_MIN_SPACING,
+        (s) => HexGrid.distance(s, candidate.coord) < params.sourceMinSpacing,
       );
       if (!tooClose) {
         sources.push(candidate.coord);
@@ -209,13 +202,14 @@ export class RiverGenerator {
     return false;
   }
 
-  /** Widen the lower 60% of a long river to 2 cells, marking them navigable */
+  /** Widen the lower portion of a long river to 2 cells, marking them navigable */
   private static widenRiver(
     cells: Map<string, HexCell>,
     path: HexCoord[],
     allRiverKeys: Set<string>,
+    params: RiverParams,
   ): void {
-    const wideStart = Math.floor(path.length * (1 - WIDE_RIVER_LOWER_FRACTION));
+    const wideStart = Math.floor(path.length * (1 - params.wideRiverFraction));
 
     for (let i = wideStart; i < path.length; i++) {
       const coord = path[i];
@@ -267,8 +261,10 @@ export class RiverGenerator {
     width: number,
     height: number,
     rng: () => number,
+    params: RiverParams,
   ): void {
-    const lakeSize = LAKE_MIN_SIZE + Math.floor(rng() * (LAKE_MAX_SIZE - LAKE_MIN_SIZE + 1));
+    const lakeSize =
+      params.lakeMinSize + Math.floor(rng() * (params.lakeMaxSize - params.lakeMinSize + 1));
 
     // Convert center to Water
     const centerCell = cells.get(HexGrid.key(center));
