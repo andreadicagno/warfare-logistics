@@ -29,6 +29,10 @@ export class MockSimulation {
   private readonly rng: () => number;
   private readonly map: GameMap;
 
+  private depotTimer = 0;
+  private unitTimer = 0;
+  private frontTimer = 0;
+
   constructor(map: GameMap) {
     this.map = map;
     this.rng = mulberry32(map.seed);
@@ -47,6 +51,145 @@ export class MockSimulation {
     this.generateFacilities();
     this.assignRouteHealth();
     this.spawnVehicles();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Update loop
+  // ---------------------------------------------------------------------------
+
+  update(deltaSec: number): void {
+    this.advanceVehicles(deltaSec);
+
+    this.depotTimer += deltaSec;
+    this.unitTimer += deltaSec;
+    this.frontTimer += deltaSec;
+
+    if (this.depotTimer >= 2) {
+      this.depotTimer -= 2;
+      this.tickDepots();
+    }
+
+    if (this.unitTimer >= 10) {
+      this.unitTimer -= 10;
+      this.tickUnits();
+    }
+
+    if (this.frontTimer >= 30) {
+      this.frontTimer -= 30;
+      this.tickFrontLine();
+    }
+  }
+
+  private advanceVehicles(deltaSec: number): void {
+    for (const vehicle of this.state.vehicles) {
+      const route =
+        vehicle.type === 'truck'
+          ? this.map.roads[vehicle.routeIndex]
+          : this.map.railways[vehicle.routeIndex];
+      if (!route) continue;
+
+      const estimatedLength = route.hexes.length * 24;
+      const dt = (vehicle.speed * deltaSec) / estimatedLength;
+      vehicle.t += dt * vehicle.direction;
+
+      if (vehicle.t > 1) {
+        vehicle.t = 1;
+        vehicle.direction = -1;
+      } else if (vehicle.t < 0) {
+        vehicle.t = 0;
+        vehicle.direction = 1;
+      }
+    }
+  }
+
+  private tickDepots(): void {
+    const frontAvgQ = this.computeFrontLineAvgQ();
+    const threshold = this.map.width * 0.3;
+
+    for (const facility of this.state.facilities) {
+      if (facility.damaged) continue;
+
+      const faction = this.state.territory.get(HexGrid.key(facility.coord));
+      if (faction !== 'allied') continue;
+
+      const dist = Math.abs(facility.coord.q - frontAvgQ);
+      if (dist > threshold) continue;
+
+      facility.storage.fuel = Math.max(0, facility.storage.fuel - this.randomFloat(0.01, 0.03));
+      facility.storage.ammo = Math.max(0, facility.storage.ammo - this.randomFloat(0.01, 0.03));
+      facility.storage.food = Math.max(0, facility.storage.food - this.randomFloat(0.01, 0.03));
+      facility.storage.parts = Math.max(0, facility.storage.parts - this.randomFloat(0.01, 0.03));
+    }
+  }
+
+  private tickUnits(): void {
+    for (const unit of this.state.units) {
+      if (unit.faction !== 'allied') continue;
+
+      unit.supplies.fuel = Math.min(
+        1,
+        Math.max(0, unit.supplies.fuel + this.randomFloat(-0.05, 0.02)),
+      );
+      unit.supplies.ammo = Math.min(
+        1,
+        Math.max(0, unit.supplies.ammo + this.randomFloat(-0.05, 0.02)),
+      );
+      unit.supplies.food = Math.min(
+        1,
+        Math.max(0, unit.supplies.food + this.randomFloat(-0.05, 0.02)),
+      );
+      unit.supplies.parts = Math.min(
+        1,
+        Math.max(0, unit.supplies.parts + this.randomFloat(-0.05, 0.02)),
+      );
+    }
+  }
+
+  private tickFrontLine(): void {
+    // Pick 2-3 random front line hexes and flip them
+    const frontHexKeys = new Set<string>();
+    for (const edge of this.state.frontLineEdges) {
+      frontHexKeys.add(HexGrid.key(edge.a));
+      frontHexKeys.add(HexGrid.key(edge.b));
+    }
+
+    const frontHexArray = [...frontHexKeys];
+    if (frontHexArray.length === 0) return;
+
+    const flipCount = this.randomInt(2, 3);
+    this.shuffle(frontHexArray);
+
+    for (let i = 0; i < Math.min(flipCount, frontHexArray.length); i++) {
+      const key = frontHexArray[i];
+      const current = this.state.territory.get(key);
+      if (current) {
+        this.state.territory.set(key, current === 'allied' ? 'enemy' : 'allied');
+      }
+    }
+
+    // Recompute front line
+    this.state.frontLineEdges.length = 0;
+    this.detectFrontLine();
+
+    // Reposition units that are now behind enemy lines
+    for (const unit of this.state.units) {
+      const unitKey = HexGrid.key(unit.coord);
+      const territory = this.state.territory.get(unitKey);
+      if (territory && territory !== unit.faction) {
+        // Find a nearby hex of the correct faction
+        const neighbors = HexGrid.neighbors(unit.coord);
+        for (const nb of neighbors) {
+          const nbKey = HexGrid.key(nb);
+          const nbFaction = this.state.territory.get(nbKey);
+          if (nbFaction === unit.faction) {
+            unit.coord = nb;
+            break;
+          }
+        }
+      }
+    }
+
+    this.state.version++;
   }
 
   // ---------------------------------------------------------------------------

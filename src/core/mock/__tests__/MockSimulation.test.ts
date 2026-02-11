@@ -101,4 +101,37 @@ describe('MockSimulation', () => {
       expect(sim.state.vehicles.length).toBeGreaterThan(0);
     });
   });
+
+  describe('update', () => {
+    it('advances vehicle positions', () => {
+      const sim = new MockSimulation(createMiniMap());
+      const v = sim.state.vehicles[0];
+      if (!v) return;
+      const oldT = v.t;
+      sim.update(1 / 60);
+      expect(v.t).not.toBe(oldT);
+    });
+
+    it('increments version when front moves', () => {
+      const sim = new MockSimulation(createMiniMap());
+      const oldVersion = sim.state.version;
+      // Advance past 30s threshold
+      for (let i = 0; i < 31 * 60; i++) {
+        sim.update(1 / 60);
+      }
+      expect(sim.state.version).toBeGreaterThan(oldVersion);
+    });
+
+    it('clamps vehicle t between 0 and 1', () => {
+      const sim = new MockSimulation(createMiniMap());
+      // Run many updates
+      for (let i = 0; i < 600; i++) {
+        sim.update(1 / 60);
+      }
+      for (const v of sim.state.vehicles) {
+        expect(v.t).toBeGreaterThanOrEqual(0);
+        expect(v.t).toBeLessThanOrEqual(1);
+      }
+    });
+  });
 });
