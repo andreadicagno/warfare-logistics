@@ -5,7 +5,7 @@ import { Camera } from './Camera';
 import { HexRenderer } from './HexRenderer';
 import { RouteLayer } from './layers/RouteLayer';
 import { SelectionLayer } from './layers/SelectionLayer';
-import { SettlementLayer } from './layers/SettlementLayer';
+import { SupplyHubLayer } from './layers/SupplyHubLayer';
 import { TerrainLayer } from './layers/TerrainLayer';
 
 export class MapRenderer {
@@ -15,7 +15,7 @@ export class MapRenderer {
   private camera: Camera;
   private terrainLayer: TerrainLayer;
   private routeLayer: RouteLayer;
-  private settlementLayer: SettlementLayer;
+  private supplyHubLayer: SupplyHubLayer;
   private selectionLayer: SelectionLayer;
   private boundOnFrame: () => void;
 
@@ -30,18 +30,18 @@ export class MapRenderer {
 
     this.terrainLayer = new TerrainLayer(gameMap);
     this.routeLayer = new RouteLayer(gameMap);
-    this.settlementLayer = new SettlementLayer(gameMap);
+    this.supplyHubLayer = new SupplyHubLayer(gameMap);
     this.selectionLayer = new SelectionLayer();
 
     this.worldContainer.addChild(this.terrainLayer.container);
     this.worldContainer.addChild(this.routeLayer.container);
-    this.worldContainer.addChild(this.settlementLayer.container);
+    this.worldContainer.addChild(this.supplyHubLayer.container);
     this.worldContainer.addChild(this.selectionLayer.container);
 
     const bounds = this.camera.getVisibleBounds();
     this.terrainLayer.build(bounds);
     this.routeLayer.build(bounds);
-    this.settlementLayer.build(bounds);
+    this.supplyHubLayer.build(bounds);
 
     const centerCol = Math.floor(gameMap.width / 2);
     const centerRow = Math.floor(gameMap.height / 2);
@@ -56,7 +56,7 @@ export class MapRenderer {
     const newBounds = this.camera.getVisibleBounds();
     this.terrainLayer.build(newBounds);
     this.routeLayer.build(newBounds);
-    this.settlementLayer.build(newBounds);
+    this.supplyHubLayer.build(newBounds);
 
     this.camera.attach();
 
@@ -111,7 +111,7 @@ export class MapRenderer {
     this.camera.detach();
     this.terrainLayer.destroy();
     this.routeLayer.destroy();
-    this.settlementLayer.destroy();
+    this.supplyHubLayer.destroy();
     this.selectionLayer.destroy();
     this.app.stage.removeChild(this.worldContainer);
     this.worldContainer.destroy();
@@ -129,6 +129,6 @@ export class MapRenderer {
     const bounds = this.camera.getVisibleBounds();
     this.terrainLayer.build(bounds);
     this.routeLayer.build(bounds);
-    this.settlementLayer.build(bounds);
+    this.supplyHubLayer.build(bounds);
   }
 }

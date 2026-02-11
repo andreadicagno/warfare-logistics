@@ -1,15 +1,14 @@
 import type { GameMap } from '@core/map/types';
-import { SettlementType } from '@core/map/types';
 import { Container, Graphics } from 'pixi.js';
 import { HexRenderer } from '../HexRenderer';
 
-const CITY_FILL = 0xd4c8a0;
-const CITY_BORDER = 0x2a2a35;
-const CITY_RADIUS = 8;
-const TOWN_FILL = 0xa09880;
-const TOWN_RADIUS = 4;
+const LARGE_FILL = 0xd4c8a0;
+const LARGE_BORDER = 0x2a2a35;
+const LARGE_RADIUS = 8;
+const SMALL_FILL = 0xa09880;
+const SMALL_RADIUS = 4;
 
-export class SettlementLayer {
+export class SupplyHubLayer {
   readonly container = new Container();
   private graphics = new Graphics();
   private gameMap: GameMap;
@@ -24,10 +23,8 @@ export class SettlementLayer {
 
     const margin = HexRenderer.HEX_SIZE * 2;
 
-    for (const cell of this.gameMap.cells.values()) {
-      if (cell.settlement === null) continue;
-
-      const px = HexRenderer.hexToPixel(cell.coord);
+    for (const hub of this.gameMap.supplyHubs) {
+      const px = HexRenderer.hexToPixel(hub.coord);
       if (
         px.x < bounds.minX - margin ||
         px.x > bounds.maxX + margin ||
@@ -36,14 +33,14 @@ export class SettlementLayer {
       )
         continue;
 
-      if (cell.settlement === SettlementType.City) {
-        this.graphics.circle(px.x, px.y, CITY_RADIUS);
-        this.graphics.fill({ color: CITY_FILL });
-        this.graphics.circle(px.x, px.y, CITY_RADIUS);
-        this.graphics.stroke({ width: 2, color: CITY_BORDER });
+      if (hub.size === 'large') {
+        this.graphics.circle(px.x, px.y, LARGE_RADIUS);
+        this.graphics.fill({ color: LARGE_FILL });
+        this.graphics.circle(px.x, px.y, LARGE_RADIUS);
+        this.graphics.stroke({ width: 2, color: LARGE_BORDER });
       } else {
-        this.graphics.circle(px.x, px.y, TOWN_RADIUS);
-        this.graphics.fill({ color: TOWN_FILL });
+        this.graphics.circle(px.x, px.y, SMALL_RADIUS);
+        this.graphics.fill({ color: SMALL_FILL });
       }
     }
   }
