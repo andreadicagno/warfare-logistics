@@ -3,7 +3,7 @@ import { HexGrid } from '../HexGrid';
 import { SmoothingPass } from '../SmoothingPass';
 import { TerrainGenerator } from '../TerrainGenerator';
 import type { HexCell } from '../types';
-import { TerrainType } from '../types';
+import { DEFAULT_GENERATION_PARAMS, TerrainType } from '../types';
 
 function makeCell(q: number, r: number, terrain: TerrainType, elevation = 0.5): HexCell {
   return {
@@ -32,7 +32,7 @@ describe('SmoothingPass', () => {
         }
       }
 
-      SmoothingPass.removeSingleHexAnomalies(cells, 20, 20);
+      SmoothingPass.removeSingleHexAnomalies(cells, 20, 20, DEFAULT_GENERATION_PARAMS.smoothing);
       expect(cells.get('5,5')!.terrain).not.toBe(TerrainType.Mountain);
     });
 
@@ -45,7 +45,7 @@ describe('SmoothingPass', () => {
         cells.set(HexGrid.key(n), makeCell(n.q, n.r, terrain, 0.7));
       });
 
-      SmoothingPass.removeSingleHexAnomalies(cells, 20, 20);
+      SmoothingPass.removeSingleHexAnomalies(cells, 20, 20, DEFAULT_GENERATION_PARAMS.smoothing);
       expect(cells.get('5,5')!.terrain).toBe(TerrainType.Mountain);
     });
   });
@@ -84,8 +84,16 @@ describe('SmoothingPass', () => {
 
   describe('apply (full pipeline)', () => {
     it('runs without error on generated terrain', () => {
-      const cells = TerrainGenerator.generate(40, 30, 'mixed', 42);
-      expect(() => SmoothingPass.apply(cells, 40, 30)).not.toThrow();
+      const cells = TerrainGenerator.generate(
+        40,
+        30,
+        DEFAULT_GENERATION_PARAMS.terrain,
+        DEFAULT_GENERATION_PARAMS.seaSides,
+        42,
+      );
+      expect(() =>
+        SmoothingPass.apply(cells, 40, 30, DEFAULT_GENERATION_PARAMS.smoothing),
+      ).not.toThrow();
     });
   });
 });

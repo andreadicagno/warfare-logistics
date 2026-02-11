@@ -1,5 +1,5 @@
 import { HexGrid } from './HexGrid';
-import type { HexCell } from './types';
+import type { HexCell, SmoothingParams } from './types';
 import { TerrainType } from './types';
 
 const TERRAIN_GROUP: Record<TerrainType, number> = {
@@ -13,8 +13,13 @@ const TERRAIN_GROUP: Record<TerrainType, number> = {
 };
 
 export class SmoothingPass {
-  static apply(cells: Map<string, HexCell>, width: number, height: number): void {
-    SmoothingPass.removeSingleHexAnomalies(cells, width, height);
+  static apply(
+    cells: Map<string, HexCell>,
+    width: number,
+    height: number,
+    params: SmoothingParams,
+  ): void {
+    SmoothingPass.removeSingleHexAnomalies(cells, width, height, params);
     SmoothingPass.removeIsolatedWater(cells, width, height);
   }
 
@@ -22,6 +27,7 @@ export class SmoothingPass {
     cells: Map<string, HexCell>,
     width: number,
     height: number,
+    params: SmoothingParams,
   ): void {
     const changes: Array<{ key: string; terrain: TerrainType }> = [];
 
@@ -38,9 +44,11 @@ export class SmoothingPass {
       const neighborGroups = neighbors.map((n) => TERRAIN_GROUP[n.terrain]);
       const avgGroup = neighborGroups.reduce((a, b) => a + b, 0) / neighborGroups.length;
 
-      const hasSameGroupNeighbor = neighborGroups.some((g) => Math.abs(g - cellGroup) <= 1);
+      const hasSameGroupNeighbor = neighborGroups.some(
+        (g) => Math.abs(g - cellGroup) <= params.groupTolerance,
+      );
 
-      if (!hasSameGroupNeighbor && Math.abs(cellGroup - avgGroup) > 2) {
+      if (!hasSameGroupNeighbor && Math.abs(cellGroup - avgGroup) > params.minGroupDifference) {
         const terrainCounts = new Map<TerrainType, number>();
         for (const n of neighbors) {
           terrainCounts.set(n.terrain, (terrainCounts.get(n.terrain) ?? 0) + 1);
