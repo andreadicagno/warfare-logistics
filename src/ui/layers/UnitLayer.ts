@@ -1,27 +1,28 @@
-import type { MockUnit, UnitType } from '@core/mock/types';
+import type { Echelon, MockFormation, MockUnit, UnitType } from '@core/mock/types';
 import { ResourceType } from '@data/types';
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { HexRenderer } from '../HexRenderer';
 
-// --- NATO box dimensions ---
-const BOX_W = 20;
-const BOX_H = 14;
+// --- Battalion NATO box dimensions ---
+const BOX_W = 14;
+const BOX_H = 10;
 const BOX_HALF_W = BOX_W / 2;
 const BOX_HALF_H = BOX_H / 2;
 
 // --- Faction colors ---
-const ALLIED_BG = 0x3366aa;
-const ENEMY_BG = 0xaa3333;
+const ALLIED_COLOR = 0x3366aa;
+const ENEMY_COLOR = 0xaa3333;
 const BORDER_COLOR = 0x111111;
 const BORDER_WIDTH = 1.5;
 const SYMBOL_COLOR = 0xdddddd;
+const HQ_BORDER_COLOR = 0xdddddd;
 const ENEMY_ALPHA = 0.6;
 
 // --- Supply bar layout ---
 const BAR_MAX_W = BOX_W;
 const BAR_H = 2;
 const BAR_GAP = 1;
-const BAR_OFFSET_Y = 2; // gap below NATO box
+const BAR_OFFSET_Y = 2;
 const BAR_BG_COLOR = 0x333333;
 
 const RESOURCE_COLORS: Record<ResourceType, number> = {
@@ -38,10 +39,16 @@ const RESOURCE_ORDER: ResourceType[] = [
   ResourceType.Parts,
 ];
 
-// --- Text label style ---
+// --- Text label styles ---
 const LABEL_STYLE = new TextStyle({
   fontFamily: 'monospace',
   fontSize: 6,
+  fill: 0xdddddd,
+});
+
+const HQ_LABEL_STYLE = new TextStyle({
+  fontFamily: 'monospace',
+  fontSize: 5,
   fill: 0xdddddd,
 });
 
@@ -53,17 +60,45 @@ const PULSE_FAST_PERIOD = 0.5;
 const PULSE_SLOW_MIN_ALPHA = 0.6;
 const PULSE_FAST_MIN_ALPHA = 0.4;
 
+// --- Sector line style ---
+const SECTOR_LINE_COLOR = 0xffffff;
+const SECTOR_LINE_ALPHA = 0.15;
+const SECTOR_LINE_WIDTH = 1;
+const DASH_LENGTH = 4;
+const GAP_LENGTH = 3;
+
+// --- HQ half-sizes by echelon ---
+const HQ_HALF_SIZES: Partial<Record<Echelon, number>> = {
+  regiment: 4,
+  division: 6,
+  corps: 8,
+  army: 10,
+};
+
+function factionColor(faction: string): number {
+  return faction === 'allied' ? ALLIED_COLOR : ENEMY_COLOR;
+}
+
+function factionAlpha(faction: string): number {
+  return faction === 'enemy' ? ENEMY_ALPHA : 1;
+}
+
 export class UnitLayer {
   readonly container = new Container();
   private boxGraphics = new Graphics();
+  private hqGraphics = new Graphics();
   private barGraphics = new Graphics();
+  private sectorGraphics = new Graphics();
   private labelContainer = new Container();
   private units: MockUnit[] = [];
+  private formations: MockFormation[] = [];
   private lastVersion = -1;
   private elapsed = 0;
 
   constructor() {
+    this.container.addChild(this.sectorGraphics);
     this.container.addChild(this.boxGraphics);
+    this.container.addChild(this.hqGraphics);
     this.container.addChild(this.barGraphics);
     this.container.addChild(this.labelContainer);
   }
@@ -72,35 +107,39 @@ export class UnitLayer {
     this.units = units;
   }
 
+  updateFormations(formations: MockFormation[]): void {
+    this.formations = formations;
+  }
+
   build(version: number): void {
     if (version === this.lastVersion) return;
     this.lastVersion = version;
 
-    this.rebuildBoxes();
+    this.rebuildBattalions();
+    this.rebuildHqs();
     this.rebuildLabels();
     this.rebuildBars(1.0);
+    this.rebuildSectorLines();
   }
 
   update(dt: number): void {
     this.elapsed += dt;
 
-    // Find worst-case allied supply average for global pulse
+    // Find worst-case allied battalion supply average for global pulse
     let worstAvg = 1.0;
-    let hasAllied = false;
+    let hasAlliedBattalion = false;
     for (const unit of this.units) {
-      if (unit.faction !== 'allied') continue;
-      hasAllied = true;
+      if (unit.faction !== 'allied' || unit.isHq) continue;
+      hasAlliedBattalion = true;
       const avg = averageSupply(unit);
       if (avg < worstAvg) worstAvg = avg;
     }
 
-    if (!hasAllied || worstAvg >= PULSE_LOW_THRESHOLD) {
-      // No pulsation needed -- draw bars at full alpha
+    if (!hasAlliedBattalion || worstAvg >= PULSE_LOW_THRESHOLD) {
       this.rebuildBars(1.0);
       return;
     }
 
-    // Compute pulse alpha from sine wave
     const period = worstAvg < PULSE_CRITICAL_THRESHOLD ? PULSE_FAST_PERIOD : PULSE_SLOW_PERIOD;
     const minAlpha =
       worstAvg < PULSE_CRITICAL_THRESHOLD ? PULSE_FAST_MIN_ALPHA : PULSE_SLOW_MIN_ALPHA;
@@ -113,7 +152,9 @@ export class UnitLayer {
   destroy(): void {
     this.container.removeChildren();
     this.boxGraphics.destroy();
+    this.hqGraphics.destroy();
     this.barGraphics.destroy();
+    this.sectorGraphics.destroy();
     for (const child of this.labelContainer.children) {
       child.destroy();
     }
@@ -121,38 +162,35 @@ export class UnitLayer {
   }
 
   // ------------------------------------------------------------------
-  // Private drawing helpers
+  // Battalion rendering (NATO boxes)
   // ------------------------------------------------------------------
 
-  private rebuildBoxes(): void {
+  private rebuildBattalions(): void {
     this.boxGraphics.clear();
 
     for (const unit of this.units) {
+      if (unit.isHq) continue;
+
       const px = HexRenderer.hexToPixel(unit.coord);
       const x = px.x - BOX_HALF_W;
       const y = px.y - BOX_HALF_H;
-
-      const isEnemy = unit.faction === 'enemy';
-      const bgColor = isEnemy ? ENEMY_BG : ALLIED_BG;
+      const alpha = factionAlpha(unit.faction);
+      const bgColor = factionColor(unit.faction);
 
       // Background fill
       this.boxGraphics.rect(x, y, BOX_W, BOX_H);
-      this.boxGraphics.fill({ color: bgColor, alpha: isEnemy ? ENEMY_ALPHA : 1 });
+      this.boxGraphics.fill({ color: bgColor, alpha });
 
       // Border
       this.boxGraphics.rect(x, y, BOX_W, BOX_H);
-      this.boxGraphics.stroke({
-        width: BORDER_WIDTH,
-        color: BORDER_COLOR,
-        alpha: isEnemy ? ENEMY_ALPHA : 1,
-      });
+      this.boxGraphics.stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha });
 
       // Unit type symbol
-      this.drawSymbol(unit.type, px.x, px.y, isEnemy ? ENEMY_ALPHA : 1);
+      this.drawBattalionSymbol(unit.type, px.x, px.y, alpha);
     }
   }
 
-  private drawSymbol(type: UnitType, cx: number, cy: number, alpha: number): void {
+  private drawBattalionSymbol(type: UnitType, cx: number, cy: number, alpha: number): void {
     switch (type) {
       case 'infantry': {
         // X: two diagonal lines inside the box
@@ -167,13 +205,13 @@ export class UnitLayer {
         break;
       }
       case 'armor': {
-        // Circle (unfilled outline), radius ~3px
+        // Circle outline
         this.boxGraphics.circle(cx, cy, 3);
         this.boxGraphics.stroke({ width: 1, color: SYMBOL_COLOR, alpha });
         break;
       }
       case 'artillery': {
-        // Filled dot, radius ~2px
+        // Filled dot
         this.boxGraphics.circle(cx, cy, 2);
         this.boxGraphics.fill({ color: SYMBOL_COLOR, alpha });
         break;
@@ -181,11 +219,83 @@ export class UnitLayer {
     }
   }
 
+  // ------------------------------------------------------------------
+  // HQ rendering (diamonds and stars)
+  // ------------------------------------------------------------------
+
+  private rebuildHqs(): void {
+    this.hqGraphics.clear();
+
+    for (const unit of this.units) {
+      if (!unit.isHq) continue;
+
+      const px = HexRenderer.hexToPixel(unit.coord);
+      const halfSize = HQ_HALF_SIZES[unit.echelon];
+      if (halfSize === undefined) continue;
+
+      const fillColor = factionColor(unit.faction);
+      const alpha = factionAlpha(unit.faction);
+
+      if (unit.echelon === 'regiment' || unit.echelon === 'division') {
+        this.drawDiamond(px.x, px.y, halfSize, fillColor, HQ_BORDER_COLOR, alpha);
+      } else {
+        this.drawStar(px.x, px.y, halfSize, fillColor, HQ_BORDER_COLOR, alpha);
+      }
+    }
+  }
+
+  private drawDiamond(
+    cx: number,
+    cy: number,
+    halfSize: number,
+    fillColor: number,
+    borderColor: number,
+    alpha: number,
+  ): void {
+    // 4 points: top, right, bottom, left
+    const points = [cx, cy - halfSize, cx + halfSize, cy, cx, cy + halfSize, cx - halfSize, cy];
+
+    this.hqGraphics.poly(points);
+    this.hqGraphics.fill({ color: fillColor, alpha });
+    this.hqGraphics.poly(points);
+    this.hqGraphics.stroke({ width: 1, color: borderColor, alpha });
+  }
+
+  private drawStar(
+    cx: number,
+    cy: number,
+    halfSize: number,
+    fillColor: number,
+    borderColor: number,
+    alpha: number,
+  ): void {
+    // 5-pointed star: alternate between outer radius and inner radius
+    const outerR = halfSize;
+    const innerR = halfSize * 0.4;
+    const points: number[] = [];
+
+    for (let i = 0; i < 10; i++) {
+      const angle = (Math.PI / 5) * i - Math.PI / 2; // start from top
+      const r = i % 2 === 0 ? outerR : innerR;
+      points.push(cx + r * Math.cos(angle));
+      points.push(cy + r * Math.sin(angle));
+    }
+
+    this.hqGraphics.poly(points);
+    this.hqGraphics.fill({ color: fillColor, alpha });
+    this.hqGraphics.poly(points);
+    this.hqGraphics.stroke({ width: 1, color: borderColor, alpha });
+  }
+
+  // ------------------------------------------------------------------
+  // Supply bars (battalions only)
+  // ------------------------------------------------------------------
+
   private rebuildBars(pulseAlpha: number): void {
     this.barGraphics.clear();
 
     for (const unit of this.units) {
-      if (unit.faction !== 'allied') continue;
+      if (unit.faction !== 'allied' || unit.isHq) continue;
 
       const px = HexRenderer.hexToPixel(unit.coord);
       const barStartY = px.y + BOX_HALF_H + BAR_OFFSET_Y;
@@ -210,8 +320,11 @@ export class UnitLayer {
     }
   }
 
+  // ------------------------------------------------------------------
+  // Labels
+  // ------------------------------------------------------------------
+
   private rebuildLabels(): void {
-    // Destroy old labels
     for (const child of this.labelContainer.children) {
       child.destroy();
     }
@@ -220,22 +333,128 @@ export class UnitLayer {
     for (const unit of this.units) {
       const px = HexRenderer.hexToPixel(unit.coord);
 
-      // Label below supply bars (or below NATO box for enemies)
-      const barsHeight =
-        unit.faction === 'allied'
-          ? BAR_OFFSET_Y + RESOURCE_ORDER.length * (BAR_H + BAR_GAP) - BAR_GAP
-          : 0;
-      const labelY = px.y + BOX_HALF_H + barsHeight + 2;
+      if (unit.isHq) {
+        // HQ label: below the shape
+        const halfSize = HQ_HALF_SIZES[unit.echelon] ?? 4;
+        const labelY = px.y + halfSize + 2;
 
-      const text = new Text({ text: unit.name, style: LABEL_STYLE });
-      text.anchor.set(0.5, 0);
-      text.position.set(px.x, labelY);
+        // Use formation name if available, otherwise unit name
+        const labelText = this.findFormationName(unit) ?? unit.name;
+        const text = new Text({ text: labelText, style: HQ_LABEL_STYLE });
+        text.anchor.set(0.5, 0);
+        text.position.set(px.x, labelY);
+        if (unit.faction === 'enemy') text.alpha = ENEMY_ALPHA;
+        this.labelContainer.addChild(text);
+      } else {
+        // Battalion label: below supply bars (or below NATO box for enemies)
+        const barsHeight =
+          unit.faction === 'allied'
+            ? BAR_OFFSET_Y + RESOURCE_ORDER.length * (BAR_H + BAR_GAP) - BAR_GAP
+            : 0;
+        const labelY = px.y + BOX_HALF_H + barsHeight + 2;
 
-      if (unit.faction === 'enemy') {
-        text.alpha = ENEMY_ALPHA;
+        const text = new Text({ text: unit.name, style: LABEL_STYLE });
+        text.anchor.set(0.5, 0);
+        text.position.set(px.x, labelY);
+        if (unit.faction === 'enemy') text.alpha = ENEMY_ALPHA;
+        this.labelContainer.addChild(text);
       }
+    }
+  }
 
-      this.labelContainer.addChild(text);
+  /** Look up the formation name for an HQ unit. */
+  private findFormationName(hqUnit: MockUnit): string | null {
+    return this.searchFormationTree(this.formations, hqUnit.parentFormationId);
+  }
+
+  private searchFormationTree(formations: MockFormation[], targetId: string): string | null {
+    for (const formation of formations) {
+      if (formation.id === targetId) return formation.name;
+      const found = this.searchFormationTree(formation.children, targetId);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  // ------------------------------------------------------------------
+  // Sector lines (division boundaries within each corps)
+  // ------------------------------------------------------------------
+
+  private rebuildSectorLines(): void {
+    this.sectorGraphics.clear();
+
+    for (const armyFormation of this.formations) {
+      // Only draw sector lines for allied formations
+      if (armyFormation.faction !== 'allied') continue;
+
+      for (const corpsFormation of armyFormation.children) {
+        const divisions = corpsFormation.children;
+        if (divisions.length < 2) continue;
+
+        // Draw a dashed line from each division HQ toward the front
+        // The "front" direction for allied is increasing q (east)
+        for (const divFormation of divisions) {
+          const hqPx = HexRenderer.hexToPixel(divFormation.hqCoord);
+
+          // Compute the average position of the division's battalions
+          // to determine a sector midpoint toward the front
+          const battalionCoords = this.collectBattalionCoords(divFormation);
+          if (battalionCoords.length === 0) continue;
+
+          let avgX = 0;
+          let avgY = 0;
+          for (const bc of battalionCoords) {
+            avgX += bc.x;
+            avgY += bc.y;
+          }
+          avgX /= battalionCoords.length;
+          avgY /= battalionCoords.length;
+
+          this.drawDashedLine(hqPx.x, hqPx.y, avgX, avgY);
+        }
+      }
+    }
+  }
+
+  /** Recursively collect pixel coords of all battalions under a formation. */
+  private collectBattalionCoords(formation: MockFormation): Array<{ x: number; y: number }> {
+    const coords: Array<{ x: number; y: number }> = [];
+    for (const unit of formation.units) {
+      if (!unit.isHq) {
+        coords.push(HexRenderer.hexToPixel(unit.coord));
+      }
+    }
+    for (const child of formation.children) {
+      coords.push(...this.collectBattalionCoords(child));
+    }
+    return coords;
+  }
+
+  /** Draw a dashed line by emitting short segments with gaps. */
+  private drawDashedLine(x0: number, y0: number, x1: number, y1: number): void {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    if (length < 1) return;
+
+    const nx = dx / length;
+    const ny = dy / length;
+    const segmentLength = DASH_LENGTH + GAP_LENGTH;
+    let dist = 0;
+
+    while (dist < length) {
+      const segStart = dist;
+      const segEnd = Math.min(dist + DASH_LENGTH, length);
+
+      this.sectorGraphics.moveTo(x0 + nx * segStart, y0 + ny * segStart);
+      this.sectorGraphics.lineTo(x0 + nx * segEnd, y0 + ny * segEnd);
+      this.sectorGraphics.stroke({
+        width: SECTOR_LINE_WIDTH,
+        color: SECTOR_LINE_COLOR,
+        alpha: SECTOR_LINE_ALPHA,
+      });
+
+      dist += segmentLength;
     }
   }
 }

@@ -110,6 +110,7 @@ export class MapRenderer {
     this.frontLineLayer.updateData(this.mockSim.state.frontLineEdges);
     this.frontLineLayer.build(this.mockSim.state.version);
     this.unitLayer.updateData(this.mockSim.state.units);
+    this.unitLayer.updateFormations(this.mockSim.state.formations);
     this.unitLayer.build(this.mockSim.state.version);
     this.supplyHubLayer.build(this.mockSim.state.version);
     this.lastMockVersion = this.mockSim.state.version;
@@ -298,6 +299,7 @@ export class MapRenderer {
       this.frontLineLayer.updateData(this.mockSim.state.frontLineEdges);
       this.frontLineLayer.build(this.lastMockVersion);
       this.unitLayer.updateData(this.mockSim.state.units);
+      this.unitLayer.updateFormations(this.mockSim.state.formations);
       this.unitLayer.build(this.lastMockVersion);
       this.supplyHubLayer.updateData(this.mockSim.state.facilities);
       this.supplyHubLayer.build(this.lastMockVersion);
