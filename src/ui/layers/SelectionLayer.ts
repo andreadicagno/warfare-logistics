@@ -9,19 +9,23 @@ const HOVER_STROKE_WIDTH = 2;
 export class SelectionLayer {
   readonly container = new Container();
   private graphics = new Graphics();
-  private currentHex: HexCoord | null = null;
+  private _currentHex: HexCoord | null = null;
+
+  get hoveredHex(): HexCoord | null {
+    return this._currentHex;
+  }
 
   constructor() {
     this.container.addChild(this.graphics);
   }
 
   setHover(coord: HexCoord | null): boolean {
-    if (coord?.q === this.currentHex?.q && coord?.r === this.currentHex?.r) {
+    if (coord?.q === this._currentHex?.q && coord?.r === this._currentHex?.r) {
       return false;
     }
 
     this.graphics.clear();
-    this.currentHex = coord;
+    this._currentHex = coord;
 
     if (!coord) return true;
 

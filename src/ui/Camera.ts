@@ -18,6 +18,10 @@ export class Camera {
     return this._isDirty;
   }
 
+  get scale(): number {
+    return this.container.scale.x;
+  }
+
   clearDirty(): void {
     this._isDirty = false;
   }
