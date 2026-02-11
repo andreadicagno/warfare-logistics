@@ -114,6 +114,8 @@ export interface RoadParams {
   riverCost: number;
   urbanCost: number;
   cityConnectionDistance: number;
+  roadReuseCost: number;
+  railwayReuseCost: number;
 }
 
 export interface GenerationParams {
@@ -176,7 +178,7 @@ export const DEFAULT_GENERATION_PARAMS: GenerationParams = {
     plainsBonus: 1,
   },
   roads: {
-    infrastructure: 'none',
+    infrastructure: 'developed',
     plainsCost: 1,
     forestCost: 2,
     hillsCost: 3,
@@ -184,5 +186,7 @@ export const DEFAULT_GENERATION_PARAMS: GenerationParams = {
     riverCost: 6,
     urbanCost: 1,
     cityConnectionDistance: 20,
+    roadReuseCost: 0.1,
+    railwayReuseCost: 0.1,
   },
 };

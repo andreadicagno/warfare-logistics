@@ -9,6 +9,8 @@ import { Sidebar } from '@ui/Sidebar';
 import type { Application } from 'pixi.js';
 
 export class Game {
+  private static readonly PARAMS_STORAGE_KEY = 'supplyline:params';
+
   private app: Application;
   private isPaused: boolean = false;
   private map: GameMap | null = null;
@@ -23,6 +25,7 @@ export class Game {
   }
 
   async init(): Promise<void> {
+    this.currentParams = Game.loadParams();
     this.generateMap(this.currentParams);
 
     const container = this.app.canvas.parentElement;
@@ -54,6 +57,23 @@ export class Game {
 
   private onGenerate(params: GenerationParams): void {
     this.generateMap(params);
+    Game.saveParams(params);
+  }
+
+  private static loadParams(): GenerationParams {
+    try {
+      const raw = localStorage.getItem(Game.PARAMS_STORAGE_KEY);
+      if (raw) {
+        return { ...DEFAULT_GENERATION_PARAMS, ...JSON.parse(raw) };
+      }
+    } catch {
+      // Ignore corrupt data
+    }
+    return { ...DEFAULT_GENERATION_PARAMS };
+  }
+
+  private static saveParams(params: GenerationParams): void {
+    localStorage.setItem(Game.PARAMS_STORAGE_KEY, JSON.stringify(params));
   }
 
   private setupControls(): void {
