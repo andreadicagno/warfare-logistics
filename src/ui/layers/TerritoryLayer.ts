@@ -8,7 +8,8 @@ import { HexRenderer } from '../HexRenderer';
 const ALLIED_COLOR = 0x4488cc;
 const ENEMY_COLOR = 0xcc4444;
 const ALPHA_MAX = 0.45;
-const ALPHA_MIN = 0.08;
+const ALPHA_MIN = 0.01;
+const MAX_GRADIENT_DISTANCE = 6; // hex cells — beyond this, no overlay
 
 export class TerritoryLayer {
   readonly container = new Container();
@@ -45,8 +46,10 @@ export class TerritoryLayer {
       const verts = HexRenderer.vertices(px.x, px.y);
       const flat = verts.flatMap((v) => [v.x, v.y]);
 
-      const normalizedDist = distanceMap.get(key) ?? 1;
-      const alpha = ALPHA_MAX - normalizedDist * (ALPHA_MAX - ALPHA_MIN);
+      const rawDist = distanceMap.get(key) ?? MAX_GRADIENT_DISTANCE + 1;
+      if (rawDist > MAX_GRADIENT_DISTANCE) continue; // no overlay beyond 6 hexes
+      const t = rawDist / MAX_GRADIENT_DISTANCE; // 0 at front, 1 at 6 hexes
+      const alpha = ALPHA_MAX - t * (ALPHA_MAX - ALPHA_MIN);
       const color = faction === 'allied' ? ALLIED_COLOR : ENEMY_COLOR;
       this.graphics.poly(flat);
       this.graphics.fill({ color, alpha });
@@ -69,28 +72,20 @@ export class TerritoryLayer {
   }
 
   /**
-   * BFS from all front-line-adjacent hexes outward.
-   * Returns a map of hex key → normalized distance (0 = front, 1 = farthest).
+   * BFS from all front-line-adjacent hexes outward, up to MAX_GRADIENT_DISTANCE.
+   * Returns a map of hex key → raw hex distance (0 = front, up to MAX_GRADIENT_DISTANCE).
    */
   private computeFrontDistances(): Map<string, number> {
     const distances = new Map<string, number>();
 
-    // Collect all hexes that touch the front line
     const frontHexKeys = new Set<string>();
     for (const edge of this.frontLineEdges) {
       frontHexKeys.add(HexGrid.key(edge.a));
       frontHexKeys.add(HexGrid.key(edge.b));
     }
 
-    if (frontHexKeys.size === 0) {
-      // No front line — everything at max distance
-      for (const key of this.territory.keys()) {
-        distances.set(key, 1);
-      }
-      return distances;
-    }
+    if (frontHexKeys.size === 0) return distances;
 
-    // BFS
     const queue: string[] = [];
     for (const key of frontHexKeys) {
       if (this.territory.has(key)) {
@@ -99,11 +94,12 @@ export class TerritoryLayer {
       }
     }
 
-    let maxDist = 0;
     let head = 0;
     while (head < queue.length) {
       const key = queue[head++];
       const dist = distances.get(key)!;
+      if (dist >= MAX_GRADIENT_DISTANCE) continue; // stop expanding beyond limit
+
       const parts = key.split(',');
       const coord: HexCoord = { q: Number(parts[0]), r: Number(parts[1]) };
 
@@ -112,17 +108,8 @@ export class TerritoryLayer {
         if (!this.territory.has(nbKey)) continue;
         if (distances.has(nbKey)) continue;
 
-        const nbDist = dist + 1;
-        distances.set(nbKey, nbDist);
-        if (nbDist > maxDist) maxDist = nbDist;
+        distances.set(nbKey, dist + 1);
         queue.push(nbKey);
-      }
-    }
-
-    // Normalize to 0-1
-    if (maxDist > 0) {
-      for (const [key, dist] of distances) {
-        distances.set(key, dist / maxDist);
       }
     }
 
