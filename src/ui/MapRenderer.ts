@@ -77,7 +77,11 @@ export class MapRenderer {
 
     // Create layers
     this.terrainLayer = new TerrainLayer(gameMap);
-    this.territoryLayer = new TerritoryLayer(gameMap, this.mockSim.state.territory);
+    this.territoryLayer = new TerritoryLayer(
+      gameMap,
+      this.mockSim.state.territory,
+      this.mockSim.state.frontLineEdges,
+    );
     this.routeLayer = new RouteLayer(gameMap, roadHealths, railwayHealths);
     this.flowLayer = new FlowLayer(() => this.camera.scale);
     this.vehicleLayer = new VehicleLayer(() => this.camera.scale);
@@ -286,7 +290,10 @@ export class MapRenderer {
     // Rebuild static layers if mock state version changed
     if (this.mockSim.state.version !== this.lastMockVersion) {
       this.lastMockVersion = this.mockSim.state.version;
-      this.territoryLayer.updateData(this.mockSim.state.territory);
+      this.territoryLayer.updateData(
+        this.mockSim.state.territory,
+        this.mockSim.state.frontLineEdges,
+      );
       this.territoryLayer.build(this.lastMockVersion);
       this.frontLineLayer.updateData(this.mockSim.state.frontLineEdges);
       this.frontLineLayer.build(this.lastMockVersion);
