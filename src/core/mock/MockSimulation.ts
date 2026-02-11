@@ -775,32 +775,55 @@ export class MockSimulation {
     // Compute average front line q for distance calculation
     const frontAvgQ = this.computeFrontLineAvgQ();
 
-    // Build a set of coords that railways touch
+    // Build sets of coords that routes touch
+    const routeHexKeys = new Set<string>();
+    for (const road of this.map.roads) {
+      for (const hex of road.hexes) {
+        routeHexKeys.add(HexGrid.key(hex));
+      }
+    }
     const railwayCoords = new Set<string>();
     for (const rw of this.map.railways) {
       for (const hex of rw.hexes) {
         railwayCoords.add(HexGrid.key(hex));
+        routeHexKeys.add(HexGrid.key(hex));
       }
     }
 
     // Compute distances from front line for each hub
     const hubDistances: Array<{ index: number; distance: number }> = [];
 
+    const forbidden = new Set([TerrainType.Water, TerrainType.Mountain, TerrainType.River]);
+
     for (let i = 0; i < this.map.supplyHubs.length; i++) {
       const hub = this.map.supplyHubs[i];
-      const hubKey = HexGrid.key(hub.coord);
+      // Nudge facility off road/railway hex if needed
+      let coord = hub.coord;
+      if (routeHexKeys.has(HexGrid.key(coord))) {
+        const neighbors = HexGrid.neighbors(coord);
+        for (const nb of neighbors) {
+          const nbKey = HexGrid.key(nb);
+          const nbCell = this.map.cells.get(nbKey);
+          if (nbCell && !forbidden.has(nbCell.terrain) && !routeHexKeys.has(nbKey)) {
+            coord = nb;
+            break;
+          }
+        }
+      }
+      const hubKey = HexGrid.key(coord);
       const cell = this.map.cells.get(hubKey);
 
-      // Determine kind
+      // Determine kind (check original hub coord for railway proximity)
+      const origKey = HexGrid.key(hub.coord);
       let kind: MockFacility['kind'] = 'depot';
-      if (railwayCoords.has(hubKey)) {
+      if (railwayCoords.has(origKey)) {
         kind = 'railHub';
       } else if (cell?.urbanClusterId) {
         kind = 'factory';
       }
 
       // Distance from front line (by q)
-      const dist = Math.abs(hub.coord.q - frontAvgQ);
+      const dist = Math.abs(coord.q - frontAvgQ);
       hubDistances.push({ index: i, distance: dist });
 
       // Storage based on distance
@@ -812,7 +835,7 @@ export class MockSimulation {
       this.state.facilities.push({
         id: `facility-${i + 1}`,
         kind,
-        coord: hub.coord,
+        coord,
         size: hub.size,
         storage: makeStorage(storageLevel, storageLevel, storageLevel, storageLevel),
         damaged: false,

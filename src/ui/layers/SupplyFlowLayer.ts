@@ -4,16 +4,16 @@ import { ResourceType } from '@data/types';
 import { Container, Graphics, type Ticker } from 'pixi.js';
 import { HexRenderer } from '../HexRenderer';
 
-const PARTICLE_RADIUS = 1.5;
+const PARTICLE_RADIUS = 2.5;
 const PARTICLE_COLOR = 0xddaa33;
 const PARTICLE_DAMAGED_COLOR = 0xcc4433;
-const PARTICLE_ALPHA = 0.5;
-const MIN_ZOOM = 0.4;
+const PARTICLE_ALPHA = 0.75;
+const MIN_ZOOM = 0.2;
 
 const SUPPLY_RANGE: Record<string, number> = {
-  depot: 8,
-  railHub: 8,
-  factory: 5,
+  depot: 12,
+  railHub: 12,
+  factory: 8,
 };
 
 const ARC_HEIGHT_FACTOR = 0.15;

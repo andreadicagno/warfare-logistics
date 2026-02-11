@@ -60,12 +60,19 @@ const PULSE_FAST_PERIOD = 0.5;
 const PULSE_SLOW_MIN_ALPHA = 0.6;
 const PULSE_FAST_MIN_ALPHA = 0.4;
 
-// --- Sector line style ---
-const SECTOR_LINE_COLOR = 0xffffff;
-const SECTOR_LINE_ALPHA = 0.15;
-const SECTOR_LINE_WIDTH = 1;
+// --- Hierarchy line style ---
+const HIERARCHY_LINE_COLOR_ALLIED = 0x88aacc;
+const HIERARCHY_LINE_COLOR_ENEMY = 0xcc8888;
+const HIERARCHY_LINE_ALPHA = 0.25;
 const DASH_LENGTH = 4;
 const GAP_LENGTH = 3;
+
+const HIERARCHY_LINE_WIDTHS: Partial<Record<Echelon, number>> = {
+  army: 1.5,
+  corps: 1.2,
+  division: 1,
+  regiment: 0.8,
+};
 
 // --- HQ half-sizes by echelon ---
 const HQ_HALF_SIZES: Partial<Record<Echelon, number>> = {
@@ -119,7 +126,7 @@ export class UnitLayer {
     this.rebuildHqs();
     this.rebuildLabels();
     this.rebuildBars(1.0);
-    this.rebuildSectorLines();
+    this.rebuildHierarchyLines();
   }
 
   update(dt: number): void {
@@ -377,61 +384,51 @@ export class UnitLayer {
   }
 
   // ------------------------------------------------------------------
-  // Sector lines (division boundaries within each corps)
+  // Command hierarchy lines (HQ → subordinate HQs/units)
   // ------------------------------------------------------------------
 
-  private rebuildSectorLines(): void {
+  private rebuildHierarchyLines(): void {
     this.sectorGraphics.clear();
 
     for (const armyFormation of this.formations) {
-      // Only draw sector lines for allied formations
-      if (armyFormation.faction !== 'allied') continue;
-
-      for (const corpsFormation of armyFormation.children) {
-        const divisions = corpsFormation.children;
-        if (divisions.length < 2) continue;
-
-        // Draw a dashed line from each division HQ toward the front
-        // The "front" direction for allied is increasing q (east)
-        for (const divFormation of divisions) {
-          const hqPx = HexRenderer.hexToPixel(divFormation.hqCoord);
-
-          // Compute the average position of the division's battalions
-          // to determine a sector midpoint toward the front
-          const battalionCoords = this.collectBattalionCoords(divFormation);
-          if (battalionCoords.length === 0) continue;
-
-          let avgX = 0;
-          let avgY = 0;
-          for (const bc of battalionCoords) {
-            avgX += bc.x;
-            avgY += bc.y;
-          }
-          avgX /= battalionCoords.length;
-          avgY /= battalionCoords.length;
-
-          this.drawDashedLine(hqPx.x, hqPx.y, avgX, avgY);
-        }
-      }
+      this.drawFormationTree(armyFormation);
     }
   }
 
-  /** Recursively collect pixel coords of all battalions under a formation. */
-  private collectBattalionCoords(formation: MockFormation): Array<{ x: number; y: number }> {
-    const coords: Array<{ x: number; y: number }> = [];
-    for (const unit of formation.units) {
-      if (!unit.isHq) {
-        coords.push(HexRenderer.hexToPixel(unit.coord));
+  /** Recursively draw hierarchy lines from a formation's HQ to its subordinates. */
+  private drawFormationTree(formation: MockFormation): void {
+    const hqPx = HexRenderer.hexToPixel(formation.hqCoord);
+    const lineColor =
+      formation.faction === 'allied' ? HIERARCHY_LINE_COLOR_ALLIED : HIERARCHY_LINE_COLOR_ENEMY;
+    const lineWidth = HIERARCHY_LINE_WIDTHS[formation.echelon] ?? 0.8;
+
+    // Draw lines to child formation HQs
+    for (const child of formation.children) {
+      const childPx = HexRenderer.hexToPixel(child.hqCoord);
+      this.drawDashedLine(hqPx.x, hqPx.y, childPx.x, childPx.y, lineWidth, lineColor);
+      // Recurse into child formation
+      this.drawFormationTree(child);
+    }
+
+    // Draw lines from regiment HQ to its battalions
+    if (formation.echelon === 'regiment') {
+      for (const unit of formation.units) {
+        if (unit.isHq) continue;
+        const unitPx = HexRenderer.hexToPixel(unit.coord);
+        this.drawDashedLine(hqPx.x, hqPx.y, unitPx.x, unitPx.y, lineWidth, lineColor);
       }
     }
-    for (const child of formation.children) {
-      coords.push(...this.collectBattalionCoords(child));
-    }
-    return coords;
   }
 
   /** Draw a dashed line by emitting short segments with gaps. */
-  private drawDashedLine(x0: number, y0: number, x1: number, y1: number): void {
+  private drawDashedLine(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    width: number,
+    color: number,
+  ): void {
     const dx = x1 - x0;
     const dy = y1 - y0;
     const length = Math.sqrt(dx * dx + dy * dy);
@@ -449,9 +446,9 @@ export class UnitLayer {
       this.sectorGraphics.moveTo(x0 + nx * segStart, y0 + ny * segStart);
       this.sectorGraphics.lineTo(x0 + nx * segEnd, y0 + ny * segEnd);
       this.sectorGraphics.stroke({
-        width: SECTOR_LINE_WIDTH,
-        color: SECTOR_LINE_COLOR,
-        alpha: SECTOR_LINE_ALPHA,
+        width,
+        color,
+        alpha: HIERARCHY_LINE_ALPHA,
       });
 
       dist += segmentLength;
