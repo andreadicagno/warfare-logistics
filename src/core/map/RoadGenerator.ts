@@ -1,6 +1,6 @@
 import { HexGrid } from './HexGrid';
-import type { HexCell, HexCoord, RoadParams, RoutePath } from './types';
-import { SettlementType, TerrainType } from './types';
+import type { HexCell, HexCoord, RoadParams, RoutePath, UrbanCluster } from './types';
+import { TerrainType } from './types';
 
 export class RoadGenerator {
   static generate(
@@ -8,6 +8,7 @@ export class RoadGenerator {
     width: number,
     height: number,
     params: RoadParams,
+    urbanClusters: UrbanCluster[],
   ): { roads: RoutePath[]; railways: RoutePath[] } {
     const terrainCost: Record<TerrainType, number> = {
       [TerrainType.Plains]: params.plainsCost,
@@ -15,24 +16,26 @@ export class RoadGenerator {
       [TerrainType.Hills]: params.hillsCost,
       [TerrainType.Marsh]: params.marshCost,
       [TerrainType.River]: params.riverCost,
+      [TerrainType.Urban]: params.urbanCost,
       [TerrainType.Mountain]: Infinity,
       [TerrainType.Water]: Infinity,
     };
-    const cities = [...cells.values()]
-      .filter((c) => c.settlement === SettlementType.City)
-      .map((c) => c.coord);
-    const towns = [...cells.values()]
-      .filter((c) => c.settlement === SettlementType.Town)
-      .map((c) => c.coord);
+
+    const majorCenters = urbanClusters
+      .filter((c) => c.tier === 'metropolis' || c.tier === 'city')
+      .map((c) => c.center);
+    const minorCenters = urbanClusters
+      .filter((c) => c.tier === 'town')
+      .map((c) => c.center);
 
     const roads: RoutePath[] = [];
     const usedPairs = new Set<string>();
 
-    // Connect each town to its nearest city
-    for (const town of towns) {
+    // Connect each minor center to nearest major center
+    for (const town of minorCenters) {
       let nearestCity: HexCoord | null = null;
       let nearestDist = Infinity;
-      for (const city of cities) {
+      for (const city of majorCenters) {
         const dist = HexGrid.distance(town, city);
         if (dist < nearestDist) {
           nearestDist = dist;
@@ -51,15 +54,15 @@ export class RoadGenerator {
       }
     }
 
-    // Connect cities to each other if within range
-    for (let i = 0; i < cities.length; i++) {
-      for (let j = i + 1; j < cities.length; j++) {
-        if (HexGrid.distance(cities[i], cities[j]) <= params.cityConnectionDistance) {
-          const pairKey = RoadGenerator.pairKey(cities[i], cities[j]);
+    // Connect major centers to each other if within range
+    for (let i = 0; i < majorCenters.length; i++) {
+      for (let j = i + 1; j < majorCenters.length; j++) {
+        if (HexGrid.distance(majorCenters[i], majorCenters[j]) <= params.cityConnectionDistance) {
+          const pairKey = RoadGenerator.pairKey(majorCenters[i], majorCenters[j]);
           if (!usedPairs.has(pairKey)) {
             const path = RoadGenerator.astar(
-              cities[i],
-              cities[j],
+              majorCenters[i],
+              majorCenters[j],
               cells,
               width,
               height,
@@ -74,16 +77,16 @@ export class RoadGenerator {
       }
     }
 
-    // Railways
+    // Railways between major centers
     const railways: RoutePath[] = [];
     if (params.infrastructure !== 'none') {
       const cityPairs: Array<{ from: HexCoord; to: HexCoord; dist: number }> = [];
-      for (let i = 0; i < cities.length; i++) {
-        for (let j = i + 1; j < cities.length; j++) {
+      for (let i = 0; i < majorCenters.length; i++) {
+        for (let j = i + 1; j < majorCenters.length; j++) {
           cityPairs.push({
-            from: cities[i],
-            to: cities[j],
-            dist: HexGrid.distance(cities[i], cities[j]),
+            from: majorCenters[i],
+            to: majorCenters[j],
+            dist: HexGrid.distance(majorCenters[i], majorCenters[j]),
           });
         }
       }
@@ -110,7 +113,6 @@ export class RoadGenerator {
     return { roads, railways };
   }
 
-  /** A* pathfinding with terrain costs (binary heap open set) */
   static astar(
     start: HexCoord,
     goal: HexCoord,
@@ -190,7 +192,6 @@ export class RoadGenerator {
   }
 }
 
-/** Binary min-heap keyed by f-score for A* open set */
 class MinHeap {
   private data: Array<{ key: string; f: number }> = [];
 
