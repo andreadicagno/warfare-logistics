@@ -1,18 +1,12 @@
 import { MapGenerator } from '@core/map/MapGenerator';
-import type { GameMap, HexCell, MapConfig } from '@core/map/types';
+import type { GameMap, GenerationParams, HexCell } from '@core/map/types';
+import { DEFAULT_GENERATION_PARAMS } from '@core/map/types';
 import type { DebugInfo } from '@ui/DebugOverlay';
 import { DebugOverlay } from '@ui/DebugOverlay';
-import { GeneratorToolbar } from '@ui/GeneratorToolbar';
 import { KeyboardController } from '@ui/KeyboardController';
 import { MapRenderer } from '@ui/MapRenderer';
+import { Sidebar } from '@ui/Sidebar';
 import type { Application } from 'pixi.js';
-
-const DEFAULT_CONFIG: MapConfig = {
-  mapSize: 'small',
-  geography: 'mixed',
-  initialInfrastructure: 'none',
-  seed: Date.now(),
-};
 
 export class Game {
   private app: Application;
@@ -20,22 +14,22 @@ export class Game {
   private map: GameMap | null = null;
   private mapRenderer: MapRenderer | null = null;
   private debugOverlay: DebugOverlay | null = null;
-  private toolbar: GeneratorToolbar | null = null;
+  private sidebar: Sidebar | null = null;
   private keyboardController: KeyboardController | null = null;
-  private currentConfig: MapConfig = { ...DEFAULT_CONFIG };
+  private currentParams: GenerationParams = { ...DEFAULT_GENERATION_PARAMS };
 
   constructor(app: Application) {
     this.app = app;
   }
 
   async init(): Promise<void> {
-    this.generateMap(this.currentConfig);
+    this.generateMap(this.currentParams);
 
     const container = this.app.canvas.parentElement;
     if (container) {
       this.debugOverlay = new DebugOverlay(container);
-      this.toolbar = new GeneratorToolbar(container, this.currentConfig, (config) =>
-        this.onGenerate(config),
+      this.sidebar = new Sidebar(container, this.currentParams, (params) =>
+        this.onGenerate(params),
       );
     }
 
@@ -48,15 +42,15 @@ export class Game {
     console.log('Supply Line initialized — map rendered');
   }
 
-  private generateMap(config: MapConfig): void {
+  private generateMap(params: GenerationParams): void {
     this.mapRenderer?.destroy();
-    this.map = MapGenerator.generate(config);
+    this.map = MapGenerator.generate(params);
     this.mapRenderer = new MapRenderer(this.app, this.map);
-    this.currentConfig = config;
+    this.currentParams = params;
   }
 
-  private onGenerate(config: MapConfig): void {
-    this.generateMap(config);
+  private onGenerate(params: GenerationParams): void {
+    this.generateMap(params);
   }
 
   private setupControls(): void {
@@ -123,8 +117,8 @@ export class Game {
     this.map = null;
     this.debugOverlay?.destroy();
     this.debugOverlay = null;
-    this.toolbar?.destroy();
-    this.toolbar = null;
+    this.sidebar?.destroy();
+    this.sidebar = null;
     this.keyboardController?.detach();
     this.keyboardController = null;
   }

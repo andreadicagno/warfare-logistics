@@ -40,13 +40,6 @@ export interface GameMap {
   railways: RoutePath[];
 }
 
-export interface MapConfig {
-  mapSize: 'small' | 'medium' | 'large';
-  geography: 'plains' | 'mixed' | 'mountainous';
-  initialInfrastructure: 'none' | 'basic' | 'developed';
-  seed: number;
-}
-
 export interface SeaSides {
   north: boolean;
   south: boolean;
