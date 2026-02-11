@@ -1,21 +1,20 @@
 import { HexGrid } from './HexGrid';
-import type { HexCell, HexCoord } from './types';
+import type { HexCell, HexCoord, SettlementParams } from './types';
 import { SettlementType, TerrainType } from './types';
 
-const CITY_DENSITY = 3 / 1200;
-const TOWN_DENSITY = 8 / 1200;
-
-const MIN_CITY_DISTANCE = 8;
-const MIN_TOWN_DISTANCE = 3;
-
 export class SettlementPlacer {
-  static place(cells: Map<string, HexCell>, width: number, height: number): void {
+  static place(
+    cells: Map<string, HexCell>,
+    width: number,
+    height: number,
+    params: SettlementParams,
+  ): void {
     const totalHexes = width * height;
-    const cityCount = Math.min(6, Math.max(3, Math.round(totalHexes * CITY_DENSITY)));
-    const townCount = Math.min(15, Math.max(8, Math.round(totalHexes * TOWN_DENSITY)));
+    const cityCount = Math.min(6, Math.max(3, Math.round(totalHexes * params.cityDensity)));
+    const townCount = Math.min(15, Math.max(8, Math.round(totalHexes * params.townDensity)));
 
-    SettlementPlacer.placeCities(cells, width, height, cityCount);
-    SettlementPlacer.placeTowns(cells, width, height, townCount);
+    SettlementPlacer.placeCities(cells, width, height, cityCount, params);
+    SettlementPlacer.placeTowns(cells, width, height, townCount, params);
   }
 
   private static placeCities(
@@ -23,6 +22,7 @@ export class SettlementPlacer {
     width: number,
     height: number,
     count: number,
+    params: SettlementParams,
   ): void {
     const candidates: Array<{ coord: HexCoord; score: number }> = [];
 
@@ -35,9 +35,10 @@ export class SettlementPlacer {
         .map((n) => cells.get(HexGrid.key(n))!)
         .filter(Boolean);
 
-      if (neighbors.some((n) => n.terrain === TerrainType.River)) score += 3;
-      if (neighbors.some((n) => n.terrain === TerrainType.Water)) score += 2;
-      score += neighbors.filter((n) => n.terrain === TerrainType.Plains).length;
+      if (neighbors.some((n) => n.terrain === TerrainType.River)) score += params.riverBonusCity;
+      if (neighbors.some((n) => n.terrain === TerrainType.Water)) score += params.waterBonusCity;
+      score +=
+        neighbors.filter((n) => n.terrain === TerrainType.Plains).length * params.plainsBonusCity;
 
       candidates.push({ coord: cell.coord, score });
     }
@@ -47,7 +48,9 @@ export class SettlementPlacer {
     const placed: HexCoord[] = [];
     for (const candidate of candidates) {
       if (placed.length >= count) break;
-      const tooClose = placed.some((c) => HexGrid.distance(c, candidate.coord) < MIN_CITY_DISTANCE);
+      const tooClose = placed.some(
+        (c) => HexGrid.distance(c, candidate.coord) < params.minCityDistance,
+      );
       if (!tooClose) {
         const cell = cells.get(HexGrid.key(candidate.coord))!;
         cell.settlement = SettlementType.City;
@@ -61,6 +64,7 @@ export class SettlementPlacer {
     width: number,
     height: number,
     count: number,
+    params: SettlementParams,
   ): void {
     const cities = [...cells.values()]
       .filter((c) => c.settlement === SettlementType.City)
@@ -103,7 +107,7 @@ export class SettlementPlacer {
       if (placed.length >= count) break;
 
       const tooCloseToTown = placed.some(
-        (t) => HexGrid.distance(t, candidate.coord) < MIN_TOWN_DISTANCE,
+        (t) => HexGrid.distance(t, candidate.coord) < params.minTownDistance,
       );
       if (tooCloseToTown) continue;
 
