@@ -11,7 +11,7 @@ function makeCell(q: number, r: number, terrain: TerrainType, elevation = 0.5): 
     terrain,
     elevation,
     moisture: 0.5,
-    settlement: null,
+    urbanClusterId: null,
   };
 }
 

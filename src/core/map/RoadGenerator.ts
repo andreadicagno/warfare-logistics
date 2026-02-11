@@ -24,9 +24,7 @@ export class RoadGenerator {
     const majorCenters = urbanClusters
       .filter((c) => c.tier === 'metropolis' || c.tier === 'city')
       .map((c) => c.center);
-    const minorCenters = urbanClusters
-      .filter((c) => c.tier === 'town')
-      .map((c) => c.center);
+    const minorCenters = urbanClusters.filter((c) => c.tier === 'town').map((c) => c.center);
 
     const roads: RoutePath[] = [];
     const usedPairs = new Set<string>();

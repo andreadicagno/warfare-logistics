@@ -3,8 +3,8 @@ import { RoadGenerator } from './RoadGenerator';
 import { SmoothingPass } from './SmoothingPass';
 import { SupplyHubPlacer } from './SupplyHubPlacer';
 import { TerrainGenerator } from './TerrainGenerator';
-import { UrbanGenerator } from './UrbanGenerator';
 import type { GameMap, GenerationParams } from './types';
+import { UrbanGenerator } from './UrbanGenerator';
 
 export const MAP_SIZE_PRESETS = {
   small: { width: 200, height: 150 },

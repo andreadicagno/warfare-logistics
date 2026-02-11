@@ -4,8 +4,8 @@ import { RiverGenerator } from '../RiverGenerator';
 import { SmoothingPass } from '../SmoothingPass';
 import { SupplyHubPlacer } from '../SupplyHubPlacer';
 import { TerrainGenerator } from '../TerrainGenerator';
-import { UrbanGenerator } from '../UrbanGenerator';
 import { DEFAULT_GENERATION_PARAMS, TerrainType } from '../types';
+import { UrbanGenerator } from '../UrbanGenerator';
 
 function makeMapWithClusters() {
   const cells = TerrainGenerator.generate(
@@ -33,9 +33,7 @@ describe('SupplyHubPlacer', () => {
     const hubs = SupplyHubPlacer.place(cells, 40, 30, clusters, 42);
     const metros = clusters.filter((c) => c.tier === 'metropolis');
     for (const metro of metros) {
-      const hub = hubs.find(
-        (h) => h.coord.q === metro.center.q && h.coord.r === metro.center.r,
-      );
+      const hub = hubs.find((h) => h.coord.q === metro.center.q && h.coord.r === metro.center.r);
       expect(hub).toBeDefined();
       expect(hub!.size).toBe('large');
     }

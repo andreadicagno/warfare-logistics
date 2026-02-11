@@ -10,6 +10,7 @@ const TERRAIN_GROUP: Record<TerrainType, number> = {
   [TerrainType.Forest]: 4,
   [TerrainType.Hills]: 5,
   [TerrainType.Mountain]: 6,
+  [TerrainType.Urban]: 3,
 };
 
 export class SmoothingPass {

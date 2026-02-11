@@ -3,8 +3,8 @@ import { HexGrid } from '../HexGrid';
 import { RiverGenerator } from '../RiverGenerator';
 import { SmoothingPass } from '../SmoothingPass';
 import { TerrainGenerator } from '../TerrainGenerator';
-import { UrbanGenerator } from '../UrbanGenerator';
 import { DEFAULT_GENERATION_PARAMS, TerrainType } from '../types';
+import { UrbanGenerator } from '../UrbanGenerator';
 
 function makeMap() {
   const cells = TerrainGenerator.generate(

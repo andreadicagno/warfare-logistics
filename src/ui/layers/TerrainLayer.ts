@@ -59,11 +59,7 @@ export class TerrainLayer {
     }
   }
 
-  private drawUrbanHex(
-    cell: HexCell,
-    px: { x: number; y: number },
-    flat: number[],
-  ): void {
+  private drawUrbanHex(cell: HexCell, px: { x: number; y: number }, flat: number[]): void {
     const urbanNeighborCount = HexGrid.neighbors(cell.coord)
       .map((n) => this.gameMap.cells.get(HexGrid.key(n)))
       .filter((n) => n?.terrain === TerrainType.Urban).length;

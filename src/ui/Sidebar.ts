@@ -83,14 +83,16 @@ export class Sidebar {
   private lakeMinSize!: SliderRow;
   private lakeMaxSize!: SliderRow;
 
-  // Settlement controls
+  // Urban controls
+  private metropolisDensity!: SliderRow;
   private cityDensity!: SliderRow;
   private townDensity!: SliderRow;
-  private minCityDistance!: SliderRow;
-  private minTownDistance!: SliderRow;
-  private riverBonusCity!: SliderRow;
-  private waterBonusCity!: SliderRow;
-  private plainsBonusCity!: SliderRow;
+  private minMetropolisSpacing!: SliderRow;
+  private minCitySpacing!: SliderRow;
+  private minTownSpacing!: SliderRow;
+  private riverBonus!: SliderRow;
+  private waterBonus!: SliderRow;
+  private plainsBonus!: SliderRow;
 
   // Road controls
   private infrastructureSelect!: HTMLSelectElement;
@@ -99,6 +101,7 @@ export class Sidebar {
   private hillsCost!: SliderRow;
   private marshCost!: SliderRow;
   private riverCost!: SliderRow;
+  private urbanCost!: SliderRow;
   private cityConnectionDistance!: SliderRow;
 
   constructor(
@@ -197,7 +200,7 @@ export class Sidebar {
     this.buildTerrainSection(scrollArea);
     this.buildSmoothingSection(scrollArea);
     this.buildRiversSection(scrollArea);
-    this.buildSettlementsSection(scrollArea);
+    this.buildUrbanSection(scrollArea);
     this.buildRoadsSection(scrollArea);
 
     this.wrapper.appendChild(scrollArea);
@@ -252,14 +255,16 @@ export class Sidebar {
         lakeMinSize: this.lakeMinSize.getValue(),
         lakeMaxSize: this.lakeMaxSize.getValue(),
       },
-      settlements: {
+      urban: {
+        metropolisDensity: this.metropolisDensity.getValue(),
         cityDensity: this.cityDensity.getValue(),
         townDensity: this.townDensity.getValue(),
-        minCityDistance: this.minCityDistance.getValue(),
-        minTownDistance: this.minTownDistance.getValue(),
-        riverBonusCity: this.riverBonusCity.getValue(),
-        waterBonusCity: this.waterBonusCity.getValue(),
-        plainsBonusCity: this.plainsBonusCity.getValue(),
+        minMetropolisSpacing: this.minMetropolisSpacing.getValue(),
+        minCitySpacing: this.minCitySpacing.getValue(),
+        minTownSpacing: this.minTownSpacing.getValue(),
+        riverBonus: this.riverBonus.getValue(),
+        waterBonus: this.waterBonus.getValue(),
+        plainsBonus: this.plainsBonus.getValue(),
       },
       roads: {
         infrastructure: this.infrastructureSelect
@@ -269,6 +274,7 @@ export class Sidebar {
         hillsCost: this.hillsCost.getValue(),
         marshCost: this.marshCost.getValue(),
         riverCost: this.riverCost.getValue(),
+        urbanCost: this.urbanCost.getValue(),
         cityConnectionDistance: this.cityConnectionDistance.getValue(),
       },
     };
@@ -315,13 +321,15 @@ export class Sidebar {
     this.lakeMinSize.setValue(params.rivers.lakeMinSize);
     this.lakeMaxSize.setValue(params.rivers.lakeMaxSize);
 
-    this.cityDensity.setValue(params.settlements.cityDensity);
-    this.townDensity.setValue(params.settlements.townDensity);
-    this.minCityDistance.setValue(params.settlements.minCityDistance);
-    this.minTownDistance.setValue(params.settlements.minTownDistance);
-    this.riverBonusCity.setValue(params.settlements.riverBonusCity);
-    this.waterBonusCity.setValue(params.settlements.waterBonusCity);
-    this.plainsBonusCity.setValue(params.settlements.plainsBonusCity);
+    this.metropolisDensity.setValue(params.urban.metropolisDensity);
+    this.cityDensity.setValue(params.urban.cityDensity);
+    this.townDensity.setValue(params.urban.townDensity);
+    this.minMetropolisSpacing.setValue(params.urban.minMetropolisSpacing);
+    this.minCitySpacing.setValue(params.urban.minCitySpacing);
+    this.minTownSpacing.setValue(params.urban.minTownSpacing);
+    this.riverBonus.setValue(params.urban.riverBonus);
+    this.waterBonus.setValue(params.urban.waterBonus);
+    this.plainsBonus.setValue(params.urban.plainsBonus);
 
     this.infrastructureSelect.value = params.roads.infrastructure;
     this.plainsCost.setValue(params.roads.plainsCost);
@@ -329,6 +337,7 @@ export class Sidebar {
     this.hillsCost.setValue(params.roads.hillsCost);
     this.marshCost.setValue(params.roads.marshCost);
     this.riverCost.setValue(params.roads.riverCost);
+    this.urbanCost.setValue(params.roads.urbanCost);
     this.cityConnectionDistance.setValue(params.roads.cityConnectionDistance);
 
     this.ignorePresetChange = false;
@@ -599,35 +608,27 @@ export class Sidebar {
     content.appendChild(this.lakeMaxSize.container);
   }
 
-  private buildSettlementsSection(parent: HTMLElement): void {
-    const { content } = this.createSection('Settlements', parent, false);
+  private buildUrbanSection(parent: HTMLElement): void {
+    const { content } = this.createSection('Urban', parent, false);
 
-    this.cityDensity = this.createSliderRow(
-      'City Density (per 1k hexes)',
-      0.001,
-      0.01,
-      0.0005,
-      0.0025,
-    );
+    this.metropolisDensity = this.createSliderRow('Metropolis Density', 1, 5, 1, 2);
+    content.appendChild(this.metropolisDensity.container);
+    this.cityDensity = this.createSliderRow('City Density', 1, 10, 1, 5);
     content.appendChild(this.cityDensity.container);
-    this.townDensity = this.createSliderRow(
-      'Town Density (per 1k hexes)',
-      0.002,
-      0.02,
-      0.001,
-      0.00667,
-    );
+    this.townDensity = this.createSliderRow('Town Density', 2, 15, 1, 8);
     content.appendChild(this.townDensity.container);
-    this.minCityDistance = this.createSliderRow('Min City Distance', 3, 20, 1, 8);
-    content.appendChild(this.minCityDistance.container);
-    this.minTownDistance = this.createSliderRow('Min Town Distance', 1, 10, 1, 3);
-    content.appendChild(this.minTownDistance.container);
-    this.riverBonusCity = this.createSliderRow('River Bonus City', 0, 10, 1, 3);
-    content.appendChild(this.riverBonusCity.container);
-    this.waterBonusCity = this.createSliderRow('Water Bonus City', 0, 10, 1, 2);
-    content.appendChild(this.waterBonusCity.container);
-    this.plainsBonusCity = this.createSliderRow('Plains Bonus City', 0, 10, 1, 1);
-    content.appendChild(this.plainsBonusCity.container);
+    this.minMetropolisSpacing = this.createSliderRow('Min Metropolis Spacing', 5, 20, 1, 10);
+    content.appendChild(this.minMetropolisSpacing.container);
+    this.minCitySpacing = this.createSliderRow('Min City Spacing', 3, 15, 1, 6);
+    content.appendChild(this.minCitySpacing.container);
+    this.minTownSpacing = this.createSliderRow('Min Town Spacing', 2, 10, 1, 4);
+    content.appendChild(this.minTownSpacing.container);
+    this.riverBonus = this.createSliderRow('River Bonus', 0, 10, 1, 3);
+    content.appendChild(this.riverBonus.container);
+    this.waterBonus = this.createSliderRow('Water Bonus', 0, 10, 1, 2);
+    content.appendChild(this.waterBonus.container);
+    this.plainsBonus = this.createSliderRow('Plains Bonus', 0, 10, 1, 1);
+    content.appendChild(this.plainsBonus.container);
   }
 
   private buildRoadsSection(parent: HTMLElement): void {
@@ -648,6 +649,8 @@ export class Sidebar {
     content.appendChild(this.marshCost.container);
     this.riverCost = this.createSliderRow('River Cost', 1, 20, 1, 6);
     content.appendChild(this.riverCost.container);
+    this.urbanCost = this.createSliderRow('Urban Cost', 1, 10, 1, 1);
+    content.appendChild(this.urbanCost.container);
     this.cityConnectionDistance = this.createSliderRow('City Connection Dist', 5, 50, 1, 20);
     content.appendChild(this.cityConnectionDistance.container);
   }

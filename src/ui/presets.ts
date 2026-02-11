@@ -46,11 +46,12 @@ export const BUILT_IN_PRESETS: Record<string, GenerationParams> = {
       geography: 'mountainous',
       highlandThreshold: 0.55,
     },
-    settlements: {
-      ...DEFAULT_GENERATION_PARAMS.settlements,
-      cityDensity: 2 / 1200,
-      townDensity: 4 / 1200,
-      minCityDistance: 12,
+    urban: {
+      ...DEFAULT_GENERATION_PARAMS.urban,
+      metropolisDensity: 1,
+      cityDensity: 2,
+      townDensity: 4,
+      minMetropolisSpacing: 15,
     },
   },
   'River Delta': {

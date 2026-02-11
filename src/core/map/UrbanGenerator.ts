@@ -62,8 +62,7 @@ export class UrbanGenerator {
 
       for (const seedCoord of seeds) {
         const targetSize =
-          tierConfig.minCells +
-          Math.floor(rng() * (tierConfig.maxCells - tierConfig.minCells + 1));
+          tierConfig.minCells + Math.floor(rng() * (tierConfig.maxCells - tierConfig.minCells + 1));
         const cluster = UrbanGenerator.growCluster(
           seedCoord,
           targetSize,
@@ -125,9 +124,7 @@ export class UrbanGenerator {
       );
       if (tooCloseToExisting) continue;
 
-      const tooCloseToNew = selected.some(
-        (s) => HexGrid.distance(s, candidate.coord) < minSpacing,
-      );
+      const tooCloseToNew = selected.some((s) => HexGrid.distance(s, candidate.coord) < minSpacing);
       if (tooCloseToNew) continue;
 
       selected.push(candidate.coord);

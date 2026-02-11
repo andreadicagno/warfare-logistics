@@ -4,9 +4,9 @@ import { RiverGenerator } from '../RiverGenerator';
 import { RoadGenerator } from '../RoadGenerator';
 import { SmoothingPass } from '../SmoothingPass';
 import { TerrainGenerator } from '../TerrainGenerator';
-import { UrbanGenerator } from '../UrbanGenerator';
 import type { HexCell, RoadParams, UrbanCluster } from '../types';
 import { DEFAULT_GENERATION_PARAMS, TerrainType } from '../types';
+import { UrbanGenerator } from '../UrbanGenerator';
 
 const defaultRoadParams = DEFAULT_GENERATION_PARAMS.roads;
 
