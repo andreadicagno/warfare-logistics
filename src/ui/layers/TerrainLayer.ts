@@ -24,6 +24,8 @@ const URBAN_DENSE_BASE = 0x6b4535;
 const URBAN_SPARSE_BASE = 0x9b6e5b;
 const NOISE_FREQUENCY = 0.15;
 const NOISE_AMPLITUDE = 0.08;
+const PATTERN_DARKEN = 0.15;
+const PATTERN_STROKE = 0.5;
 
 export class TerrainLayer {
   readonly container = new Container();
@@ -66,6 +68,8 @@ export class TerrainLayer {
         this.graphics.fill({ color: fillColor });
         this.graphics.poly(flat);
         this.graphics.stroke({ width: BORDER_WIDTH, color: darken(baseColor, BORDER_DARKEN) });
+        const hash = (cell.coord.q * 73856093) ^ (cell.coord.r * 19349663);
+        this.drawTerrainPattern(cell.terrain, px, hash);
       }
     }
   }
@@ -129,6 +133,108 @@ export class TerrainLayer {
     if (hasNonUrbanNeighbor) {
       this.graphics.poly(flat);
       this.graphics.stroke({ width: BORDER_WIDTH, color: darken(baseColor, BORDER_DARKEN) });
+    }
+  }
+
+  private drawTerrainPattern(
+    terrain: TerrainType,
+    px: { x: number; y: number },
+    hash: number,
+  ): void {
+    const color = darken(TERRAIN_COLORS[terrain], PATTERN_DARKEN);
+    const size = HexRenderer.HEX_SIZE;
+
+    switch (terrain) {
+      case TerrainType.Forest:
+        this.drawTreeCanopies(px, hash, color, size);
+        break;
+      case TerrainType.Hills:
+        this.drawContourArcs(px, hash, color, size);
+        break;
+      case TerrainType.Mountain:
+        this.drawPeakTriangles(px, hash, color, size);
+        break;
+      case TerrainType.Marsh:
+        this.drawMarshDashes(px, hash, color, size);
+        break;
+    }
+  }
+
+  private drawTreeCanopies(
+    px: { x: number; y: number },
+    hash: number,
+    color: number,
+    size: number,
+  ): void {
+    const count = 2 + (Math.abs(hash) % 2);
+    const radius = size * 0.12;
+    for (let i = 0; i < count; i++) {
+      const h = (hash * (i + 7)) & 0xffff;
+      const ox = ((h & 0xff) / 255 - 0.5) * size * 0.6;
+      const oy = (((h >> 8) & 0xff) / 255 - 0.5) * size * 0.5;
+      this.graphics.circle(px.x + ox, px.y + oy, radius);
+      this.graphics.stroke({ width: PATTERN_STROKE, color });
+    }
+  }
+
+  private drawContourArcs(
+    px: { x: number; y: number },
+    hash: number,
+    color: number,
+    size: number,
+  ): void {
+    const count = 2 + (Math.abs(hash) % 2);
+    for (let i = 0; i < count; i++) {
+      const t = ((i + 0.5) / count) * 2 - 1;
+      const cy = px.y + t * size * 0.35;
+      const h = (hash * (i + 3)) & 0xffff;
+      const ox = ((h & 0xff) / 255 - 0.5) * size * 0.15;
+      const arcWidth = size * 0.35;
+      this.graphics.moveTo(px.x - arcWidth + ox, cy);
+      this.graphics.quadraticCurveTo(px.x + ox, cy - size * 0.12, px.x + arcWidth + ox, cy);
+      this.graphics.stroke({ width: PATTERN_STROKE, color });
+    }
+  }
+
+  private drawPeakTriangles(
+    px: { x: number; y: number },
+    hash: number,
+    color: number,
+    size: number,
+  ): void {
+    const count = 1 + (Math.abs(hash) % 2);
+    const triH = size * 0.3;
+    const triW = size * 0.2;
+    for (let i = 0; i < count; i++) {
+      const h = (hash * (i + 5)) & 0xffff;
+      const ox = ((h & 0xff) / 255 - 0.5) * size * 0.4;
+      const oy = (((h >> 8) & 0xff) / 255 - 0.5) * size * 0.3;
+      const cx = px.x + ox;
+      const cy = px.y + oy;
+      this.graphics.moveTo(cx, cy - triH / 2);
+      this.graphics.lineTo(cx - triW / 2, cy + triH / 2);
+      this.graphics.lineTo(cx + triW / 2, cy + triH / 2);
+      this.graphics.closePath();
+      this.graphics.stroke({ width: PATTERN_STROKE, color });
+    }
+  }
+
+  private drawMarshDashes(
+    px: { x: number; y: number },
+    hash: number,
+    color: number,
+    size: number,
+  ): void {
+    const count = 3 + (Math.abs(hash) % 2);
+    const dashW = size * 0.25;
+    for (let i = 0; i < count; i++) {
+      const t = ((i + 0.5) / count) * 2 - 1;
+      const cy = px.y + t * size * 0.4;
+      const h = (hash * (i + 11)) & 0xffff;
+      const ox = ((h & 0xff) / 255 - 0.5) * size * 0.3;
+      this.graphics.moveTo(px.x - dashW / 2 + ox, cy);
+      this.graphics.lineTo(px.x + dashW / 2 + ox, cy);
+      this.graphics.stroke({ width: PATTERN_STROKE, color });
     }
   }
 
