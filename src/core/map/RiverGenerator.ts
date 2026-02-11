@@ -138,7 +138,6 @@ export class RiverGenerator {
 
         // Stop conditions: map edge
         if (!HexGrid.inBounds(neighbor, width, height)) {
-          path.push(current); // current is already in path, edge termination
           return path;
         }
 
@@ -185,9 +184,9 @@ export class RiverGenerator {
     allRiverKeys: Set<string>,
   ): boolean {
     const endpoint = path[path.length - 1];
-    const neighbors = HexGrid.neighbors(endpoint);
+    const pathKeys = new Set(path.map((p) => HexGrid.key(p)));
 
-    for (const neighbor of neighbors) {
+    for (const neighbor of HexGrid.neighbors(endpoint)) {
       // Map edge counts as valid terminus
       if (!HexGrid.inBounds(neighbor, width, height)) {
         return true;
@@ -202,7 +201,7 @@ export class RiverGenerator {
       }
 
       // Existing river from a different river path (confluence) counts
-      if (allRiverKeys.has(key) && !path.some((p) => HexGrid.key(p) === key)) {
+      if (allRiverKeys.has(key) && !pathKeys.has(key)) {
         return true;
       }
     }
