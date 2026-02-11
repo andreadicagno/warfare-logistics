@@ -46,6 +46,6 @@ export class MapGenerator {
       urbanClusters,
     );
 
-    return { width, height, cells, urbanClusters, supplyHubs, roads, railways };
+    return { width, height, seed: params.seed, cells, urbanClusters, supplyHubs, roads, railways };
   }
 }

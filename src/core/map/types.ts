@@ -45,6 +45,7 @@ export interface RoutePath {
 export interface GameMap {
   width: number;
   height: number;
+  seed: number;
   cells: Map<string, HexCell>;
   urbanClusters: UrbanCluster[];
   supplyHubs: SupplyHub[];

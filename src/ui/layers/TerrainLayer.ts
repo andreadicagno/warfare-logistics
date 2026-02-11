@@ -2,7 +2,8 @@ import { HexGrid } from '@core/map/HexGrid';
 import type { GameMap, HexCell } from '@core/map/types';
 import { TerrainType } from '@core/map/types';
 import { Container, Graphics } from 'pixi.js';
-import { darken } from '../colorUtils';
+import { createNoise2D } from 'simplex-noise';
+import { adjustLuminosity, darken } from '../colorUtils';
 import { HexRenderer } from '../HexRenderer';
 
 const TERRAIN_COLORS: Record<TerrainType, number> = {
@@ -21,16 +22,26 @@ const BORDER_DARKEN = 0.3;
 const URBAN_GRID_COLOR = 0x9b7b6b;
 const URBAN_DENSE_BASE = 0x6b4535;
 const URBAN_SPARSE_BASE = 0x9b6e5b;
+const NOISE_FREQUENCY = 0.15;
+const NOISE_AMPLITUDE = 0.08;
 
 export class TerrainLayer {
   readonly container = new Container();
   private graphics = new Graphics();
   private gameMap: GameMap;
+  private noise: ReturnType<typeof createNoise2D>;
   private built = false;
 
   constructor(gameMap: GameMap) {
     this.gameMap = gameMap;
     this.container.addChild(this.graphics);
+    // Seed the noise generator from the map seed using mulberry32 first step
+    let s = gameMap.seed | 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    const seedValue = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    this.noise = createNoise2D(() => seedValue);
   }
 
   build(_bounds: { minX: number; minY: number; maxX: number; maxY: number }): void {
@@ -43,25 +54,34 @@ export class TerrainLayer {
       const verts = HexRenderer.vertices(px.x, px.y);
       const flat = verts.flatMap((v) => [v.x, v.y]);
 
+      const noiseVal = this.noise(cell.coord.q * NOISE_FREQUENCY, cell.coord.r * NOISE_FREQUENCY);
+      const variation = noiseVal * NOISE_AMPLITUDE;
+
       if (cell.terrain === TerrainType.Urban) {
-        this.drawUrbanHex(cell, px, flat);
+        this.drawUrbanHex(cell, px, flat, variation);
       } else {
-        const fillColor = TERRAIN_COLORS[cell.terrain];
+        const baseColor = TERRAIN_COLORS[cell.terrain];
+        const fillColor = adjustLuminosity(baseColor, variation);
         this.graphics.poly(flat);
         this.graphics.fill({ color: fillColor });
         this.graphics.poly(flat);
-        this.graphics.stroke({ width: BORDER_WIDTH, color: darken(fillColor, BORDER_DARKEN) });
+        this.graphics.stroke({ width: BORDER_WIDTH, color: darken(baseColor, BORDER_DARKEN) });
       }
     }
   }
 
-  private drawUrbanHex(cell: HexCell, px: { x: number; y: number }, flat: number[]): void {
+  private drawUrbanHex(
+    cell: HexCell,
+    px: { x: number; y: number },
+    flat: number[],
+    variation: number,
+  ): void {
     const urbanNeighborCount = HexGrid.neighbors(cell.coord)
       .map((n) => this.gameMap.cells.get(HexGrid.key(n)))
       .filter((n) => n?.terrain === TerrainType.Urban).length;
 
     const isDense = urbanNeighborCount >= 3;
-    const baseColor = isDense ? URBAN_DENSE_BASE : URBAN_SPARSE_BASE;
+    const baseColor = adjustLuminosity(isDense ? URBAN_DENSE_BASE : URBAN_SPARSE_BASE, variation);
 
     this.graphics.poly(flat);
     this.graphics.fill({ color: baseColor });
