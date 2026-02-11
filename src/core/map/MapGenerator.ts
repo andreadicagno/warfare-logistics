@@ -1,0 +1,44 @@
+import type { GameMap, MapConfig } from './types';
+import { TerrainGenerator } from './TerrainGenerator';
+import { RiverGenerator } from './RiverGenerator';
+import { SmoothingPass } from './SmoothingPass';
+import { SettlementPlacer } from './SettlementPlacer';
+import { RoadGenerator } from './RoadGenerator';
+
+const MAP_SIZES: Record<string, { width: number; height: number }> = {
+  small: { width: 40, height: 30 },
+  medium: { width: 60, height: 45 },
+  large: { width: 80, height: 60 },
+};
+
+export class MapGenerator {
+  static generate(config: MapConfig): GameMap {
+    const { width, height } = MAP_SIZES[config.mapSize];
+
+    // Phase 1 & 2: Elevation + terrain assignment
+    const cells = TerrainGenerator.generate(width, height, config.geography, config.seed);
+
+    // Phase 3: Rivers
+    const rivers = RiverGenerator.generate(cells, width, height, config.seed);
+
+    // Phase 4: Smoothing
+    SmoothingPass.apply(cells, width, height);
+
+    // Settlement placement
+    SettlementPlacer.place(cells, width, height);
+
+    // Initial infrastructure
+    const { roads, railways } = RoadGenerator.generate(
+      cells, width, height, config.initialInfrastructure
+    );
+
+    return {
+      width,
+      height,
+      cells,
+      rivers,
+      roads,
+      railways,
+    };
+  }
+}
