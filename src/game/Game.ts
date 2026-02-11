@@ -1,4 +1,7 @@
 import { type Application, Graphics, Text, TextStyle } from 'pixi.js';
+import { MapGenerator } from '@core/map/MapGenerator';
+import { SettlementType } from '@core/map/types';
+import type { GameMap } from '@core/map/types';
 
 /**
  * Main game class - orchestrates all game systems
@@ -6,12 +9,36 @@ import { type Application, Graphics, Text, TextStyle } from 'pixi.js';
 export class Game {
   private app: Application;
   private isPaused: boolean = false;
+  private map: GameMap | null = null;
 
   constructor(app: Application) {
     this.app = app;
   }
 
   async init(): Promise<void> {
+    // Generate map
+    this.map = MapGenerator.generate({
+      mapSize: 'small',
+      geography: 'mixed',
+      initialInfrastructure: 'basic',
+      seed: Date.now(),
+    });
+
+    const terrainCounts = new Map<string, number>();
+    for (const cell of this.map.cells.values()) {
+      terrainCounts.set(cell.terrain, (terrainCounts.get(cell.terrain) ?? 0) + 1);
+    }
+    console.log('Map generated:', {
+      size: `${this.map.width}x${this.map.height}`,
+      cells: this.map.cells.size,
+      rivers: this.map.rivers.length,
+      roads: this.map.roads.length,
+      railways: this.map.railways.length,
+      terrain: Object.fromEntries(terrainCounts),
+      cities: [...this.map.cells.values()].filter((c) => c.settlement === SettlementType.City).length,
+      towns: [...this.map.cells.values()].filter((c) => c.settlement === SettlementType.Town).length,
+    });
+
     // Placeholder: draw a simple test screen
     this.drawTestScreen();
 
