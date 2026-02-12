@@ -72,17 +72,23 @@ src/
 ├── main.ts                  # Entry point (creates PixiJS app + Game)
 ├── core/                    # Simulation logic (pure, no rendering)
 │   ├── index.ts             # Barrel export
-│   └── map/
-│       ├── types.ts             # HexCoord, HexCell, TerrainType, GameMap, MapConfig
-│       ├── HexGrid.ts           # Flat-top axial hex grid utilities (static class)
-│       ├── MapGenerator.ts      # Orchestrates full map generation pipeline
-│       ├── TerrainGenerator.ts  # Elevation/moisture → terrain assignment
-│       ├── SmoothingPass.ts     # Post-processing terrain smoothing
-│       ├── RiverGenerator.ts    # Greedy downhill river flow
-│       ├── RoadGenerator.ts     # Road network between settlements
-│       ├── SettlementPlacer.ts  # Town/city placement logic
-│       ├── rng.ts               # Seeded random number generator
-│       └── __tests__/           # Unit tests for map module
+│   ├── Profiler.ts          # Phase timing measurement utility
+│   ├── map/
+│   │   ├── types.ts             # HexCoord, HexCell, TerrainType, GameMap, MapConfig
+│   │   ├── HexGrid.ts           # Flat-top axial hex grid utilities (static class)
+│   │   ├── MapGenerator.ts      # Orchestrates full map generation pipeline
+│   │   ├── TerrainGenerator.ts  # Elevation/moisture → terrain assignment
+│   │   ├── SmoothingPass.ts     # Post-processing terrain smoothing
+│   │   ├── RiverGenerator.ts    # Greedy downhill river flow
+│   │   ├── RoadGenerator.ts     # Road network between settlements
+│   │   ├── UrbanGenerator.ts    # Town/city/metropolis cluster placement
+│   │   ├── SupplyHubPlacer.ts   # Supply hub placement on urban clusters
+│   │   ├── rng.ts               # Seeded random number generator
+│   │   └── __tests__/           # Unit tests for map module
+│   └── mock/                # Fake game state for rendering development
+│       ├── types.ts             # Faction, MockUnit, MockFacility, MockVehicle
+│       ├── MockSimulation.ts    # Generates mock units, vehicles, front lines
+│       └── __tests__/           # Mock simulation tests
 ├── game/
 │   ├── Game.ts              # Main game class
 │   └── index.ts             # Barrel export
@@ -92,18 +98,27 @@ src/
 │   ├── MapRenderer.ts       # Orchestrates map rendering
 │   ├── HexRenderer.ts       # Hex tile rendering utilities
 │   ├── DebugOverlay.ts      # Dev debug info overlay
-│   ├── GeneratorToolbar.ts  # Map regeneration controls
+│   ├── Sidebar.ts           # Generation params sidebar with layer toggles
+│   ├── KeyboardController.ts # Keyboard input handling
+│   ├── colorUtils.ts        # Color manipulation helpers (darken, shift)
+│   ├── presets.ts           # Built-in & custom map generation presets
+│   ├── spline.ts            # Bézier curve utilities for route rendering
 │   ├── layers/              # Composable render layers
-│   │   ├── TerrainLayer.ts
-│   │   ├── RiverLayer.ts
-│   │   ├── RouteLayer.ts
-│   │   ├── SupplyHubLayer.ts
-│   │   └── SelectionLayer.ts
-│   ├── Sidebar.ts             # Generation params sidebar with layer toggles
-│   ├── KeyboardController.ts  # Keyboard input handling
+│   │   ├── TerrainLayer.ts      # Hex terrain rendering
+│   │   ├── RouteLayer.ts        # Road & railway route rendering
+│   │   ├── RouteAnimator.ts     # Animated particles along routes
+│   │   ├── FlowLayer.ts         # Flow direction visualization
+│   │   ├── SupplyFlowLayer.ts   # Animated supply particles between facilities
+│   │   ├── SupplyHubLayer.ts    # Supply hub icons & labels
+│   │   ├── FrontLineLayer.ts    # Front line boundary rendering
+│   │   ├── TerritoryLayer.ts    # Faction territory overlay
+│   │   ├── UnitLayer.ts         # NATO unit symbols & formation hierarchy
+│   │   ├── VehicleLayer.ts      # Animated truck/train vehicles
+│   │   └── SelectionLayer.ts    # Hex selection highlight
 │   └── __tests__/           # UI unit tests
 └── data/
-    ├── types.ts             # Game-level types (resources, facilities — stubs)
+    ├── index.ts             # Barrel export
+    ├── types.ts             # Game-level types (resources, facilities)
     └── types.test.ts        # Co-located test
 ```
 
@@ -153,7 +168,22 @@ All in `docs/plans/`:
 - `2025-02-11-map-visualization-design.md` — Map visualization UI design
 - `2025-02-11-map-visualization-implementation.md` — Map visualization implementation plan
 - `2025-02-11-river-lake-redesign-design.md` — River & lake system redesign
+- `2025-02-11-river-lake-implementation.md` — River & lake implementation plan
 - `2025-02-11-ui-debug-toolbar-design.md` — Debug overlay & generator toolbar design
+- `2025-02-11-map-realism-design.md` — Map realism improvements
+- `2025-02-11-map-ui-overhaul-design.md` — Map UI overhaul design
+- `2025-02-11-map-ui-overhaul-implementation.md` — Map UI overhaul implementation plan
+- `2025-02-11-keyboard-navigation-design.md` — Keyboard navigation design
+- `2025-02-11-params-persistence-reuse-cost.md` — Params persistence & reuse cost analysis
+- `2025-02-11-urban-terrain-supply-hub-design.md` — Urban terrain & supply hub design
+- `2025-02-11-urban-terrain-supply-hub-implementation.md` — Urban terrain & supply hub implementation plan
+- `2025-02-11-git-strategy-and-ci-cd-design.md` — Git strategy & CI/CD design
+- `2025-02-11-mock-simulation-improvements-design.md` — Mock simulation improvements design
+- `2025-02-11-mock-simulation-improvements-implementation.md` — Mock simulation improvements implementation plan
+- `2025-02-11-map-visual-game-elements-design.md` — Map visual game elements design
+- `2025-02-11-map-visual-game-elements-implementation.md` — Map visual game elements implementation plan
+- `2025-02-11-map-visual-polish-design.md` — Map visual polish design
+- `2025-02-11-map-visual-polish-implementation.md` — Map visual polish implementation plan
 
 ## Research Sources
 
