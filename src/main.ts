@@ -2,7 +2,6 @@ import { Game } from '@game/Game';
 import { Application } from 'pixi.js';
 
 async function init() {
-  // Create PixiJS application
   const app = new Application();
 
   await app.init({
@@ -11,18 +10,24 @@ async function init() {
     antialias: true,
   });
 
-  // Add canvas to DOM
   const container = document.getElementById('game-container');
   if (!container) {
     throw new Error('Game container not found');
   }
   container.appendChild(app.canvas);
 
-  // Initialize game
-  const game = new Game(app);
-  await game.init();
+  const route = location.hash.replace('#', '') || '/';
 
-  console.log('Supply Line initialized');
+  if (route === '/playground') {
+    const { PlaygroundPage } = await import('@ui/playground/PlaygroundPage');
+    const page = new PlaygroundPage(app);
+    await page.init();
+    console.log('Playground initialized');
+  } else {
+    const game = new Game(app);
+    await game.init();
+    console.log('Supply Line initialized');
+  }
 }
 
 init().catch(console.error);

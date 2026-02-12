@@ -1,0 +1,113 @@
+import { MapGenerator } from '@core/map/MapGenerator';
+import type { GameMap, HexCoord } from '@core/map/types';
+import { DEFAULT_GENERATION_PARAMS } from '@core/map/types';
+import { Simulation } from '@core/simulation/Simulation';
+import type { Application } from 'pixi.js';
+import { Container } from 'pixi.js';
+import { Camera } from '../Camera';
+import { HexRenderer } from '../HexRenderer';
+import { SelectionLayer } from '../layers/SelectionLayer';
+import { TerrainLayer } from '../layers/TerrainLayer';
+
+const PLAYGROUND_SEED = 42;
+const PLAYGROUND_MAP_SIZE = { width: 60, height: 45 };
+
+export class PlaygroundPage {
+  private app: Application;
+  private gameMap!: GameMap;
+  private _simulation!: Simulation;
+  private worldContainer!: Container;
+  private camera!: Camera;
+  private terrainLayer!: TerrainLayer;
+  private selectionLayer!: SelectionLayer;
+  private boundOnFrame!: () => void;
+
+  constructor(app: Application) {
+    this.app = app;
+  }
+
+  /** The simulation instance — available after init(). */
+  get simulation(): Simulation {
+    return this._simulation;
+  }
+
+  async init(): Promise<void> {
+    // Generate a small, fixed-seed map
+    const params = {
+      ...DEFAULT_GENERATION_PARAMS,
+      width: PLAYGROUND_MAP_SIZE.width,
+      height: PLAYGROUND_MAP_SIZE.height,
+      seed: PLAYGROUND_SEED,
+    };
+    this.gameMap = MapGenerator.generate(params);
+
+    // Create simulation
+    this._simulation = new Simulation(this.gameMap);
+
+    // Scene graph
+    this.worldContainer = new Container();
+    this.app.stage.addChild(this.worldContainer);
+
+    // Camera
+    this.camera = new Camera(this.worldContainer, this.app);
+
+    // Terrain layer
+    this.terrainLayer = new TerrainLayer(this.gameMap);
+    this.worldContainer.addChild(this.terrainLayer.container);
+
+    // Selection layer
+    this.selectionLayer = new SelectionLayer();
+    this.worldContainer.addChild(this.selectionLayer.container);
+
+    // Initial build
+    const bounds = this.camera.getVisibleBounds();
+    this.terrainLayer.build(bounds);
+
+    // Center camera on map middle
+    const centerCol = Math.floor(this.gameMap.width / 2);
+    const centerRow = Math.floor(this.gameMap.height / 2);
+    const centerCoord = { q: centerCol, r: centerRow - Math.floor(centerCol / 2) };
+    const centerPx = HexRenderer.hexToPixel(centerCoord);
+    this.camera.centerOn(centerPx.x, centerPx.y);
+    this.camera.clearDirty();
+    this.terrainLayer.build(this.camera.getVisibleBounds());
+
+    // Attach camera controls
+    this.camera.attach();
+
+    // Pointer tracking for hex hover
+    this.app.stage.on('pointermove', this.onPointerMove);
+
+    // Frame loop
+    this.boundOnFrame = this.onFrame.bind(this);
+    this.app.ticker.add(this.boundOnFrame);
+  }
+
+  get hoveredHex(): HexCoord | null {
+    return this.selectionLayer.hoveredHex;
+  }
+
+  private onPointerMove = (e: { global: { x: number; y: number } }): void => {
+    const world = this.camera.screenToWorld(e.global.x, e.global.y);
+    const hex = HexRenderer.pixelToHex(world.x, world.y);
+    this.selectionLayer.setHover(hex);
+  };
+
+  private onFrame(): void {
+    if (this.camera.isDirty) {
+      const bounds = this.camera.getVisibleBounds();
+      this.terrainLayer.build(bounds);
+      this.camera.clearDirty();
+    }
+  }
+
+  destroy(): void {
+    this.app.ticker.remove(this.boundOnFrame);
+    this.app.stage.off('pointermove', this.onPointerMove);
+    this.camera.detach();
+    this.terrainLayer.destroy();
+    this.selectionLayer.destroy();
+    this.app.stage.removeChild(this.worldContainer);
+    this.worldContainer.destroy();
+  }
+}
