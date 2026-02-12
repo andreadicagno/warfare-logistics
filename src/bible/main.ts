@@ -2,6 +2,7 @@ import './styles.css';
 import './components/TerrainPreview';
 import './components/SupplyLinePreview';
 import './components/FacilityPreview';
+import './components/UnitPreview';
 import { findMarkerElements, renderMarkdown } from './markdownLoader';
 import { mountComponents } from './mountComponent';
 
@@ -31,6 +32,11 @@ const pages: BiblePage[] = [
     slug: 'facilities',
     title: 'Facilities',
     load: () => import('../../docs/bible/facilities.md?raw').then((m) => m.default),
+  },
+  {
+    slug: 'units',
+    title: 'Units',
+    load: () => import('../../docs/bible/units.md?raw').then((m) => m.default),
   },
 ];
 
