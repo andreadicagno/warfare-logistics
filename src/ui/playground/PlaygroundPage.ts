@@ -2,12 +2,14 @@ import { MapGenerator } from '@core/map/MapGenerator';
 import type { GameMap, HexCoord } from '@core/map/types';
 import { DEFAULT_GENERATION_PARAMS } from '@core/map/types';
 import { Simulation } from '@core/simulation/Simulation';
+import type { BuildTool } from '@core/simulation/types';
 import type { Application } from 'pixi.js';
 import { Container } from 'pixi.js';
 import { Camera } from '../Camera';
 import { HexRenderer } from '../HexRenderer';
 import { SelectionLayer } from '../layers/SelectionLayer';
 import { TerrainLayer } from '../layers/TerrainLayer';
+import { BuildToolbar } from './BuildToolbar';
 
 const PLAYGROUND_SEED = 42;
 const PLAYGROUND_MAP_SIZE = { width: 60, height: 45 };
@@ -21,6 +23,8 @@ export class PlaygroundPage {
   private terrainLayer!: TerrainLayer;
   private selectionLayer!: SelectionLayer;
   private boundOnFrame!: () => void;
+  private toolbar!: BuildToolbar;
+  private _currentTool: BuildTool = 'select';
 
   constructor(app: Application) {
     this.app = app;
@@ -29,6 +33,11 @@ export class PlaygroundPage {
   /** The simulation instance — available after init(). */
   get simulation(): Simulation {
     return this._simulation;
+  }
+
+  /** The currently active build tool. */
+  get currentTool(): BuildTool {
+    return this._currentTool;
   }
 
   async init(): Promise<void> {
@@ -75,6 +84,14 @@ export class PlaygroundPage {
     // Attach camera controls
     this.camera.attach();
 
+    // Build toolbar
+    const htmlContainer = this.app.canvas.parentElement;
+    if (htmlContainer) {
+      this.toolbar = new BuildToolbar(htmlContainer, (tool) => {
+        this._currentTool = tool;
+      });
+    }
+
     // Pointer tracking for hex hover
     this.app.stage.on('pointermove', this.onPointerMove);
 
@@ -104,6 +121,7 @@ export class PlaygroundPage {
   destroy(): void {
     this.app.ticker.remove(this.boundOnFrame);
     this.app.stage.off('pointermove', this.onPointerMove);
+    this.toolbar?.destroy();
     this.camera.detach();
     this.terrainLayer.destroy();
     this.selectionLayer.destroy();
