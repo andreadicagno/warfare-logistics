@@ -31,6 +31,8 @@ const LABEL_STYLE = new TextStyle({
 
 const CANVAS_W = FACILITY_KINDS.length * SPACING + 20;
 const CANVAS_H = 120;
+const CANVAS_W_SINGLE = 140;
+const CANVAS_H_SINGLE = 120;
 
 function drawFacilityIcon(g: Graphics, cx: number, cy: number, kind: FacilityKind): void {
   const inner = SIZE * 0.6;
@@ -190,11 +192,69 @@ function redraw(
   }
 }
 
-const factory: ComponentFactory = async (container) => {
+function redrawSingle(
+  scene: Container,
+  g: Graphics,
+  kind: FacilityKind,
+  damaged: boolean,
+  storage: Record<string, number>,
+): void {
+  g.clear();
+
+  while (scene.children.length > 1) {
+    const child = scene.children[scene.children.length - 1];
+    child.destroy();
+    scene.removeChildAt(scene.children.length - 1);
+  }
+
+  const cx = CANVAS_W_SINGLE / 2;
+  const cy = 55;
+
+  drawResourceBars(g, cx, cy - SIZE - BAR_H - 4, storage);
+
+  g.rect(cx - SIZE, cy - SIZE, SIZE * 2, SIZE * 2);
+  g.fill({ color: ICON_BG });
+  g.rect(cx - SIZE, cy - SIZE, SIZE * 2, SIZE * 2);
+  g.stroke({ width: 1, color: ICON_BORDER });
+
+  drawFacilityIcon(g, cx, cy, kind);
+
+  if (damaged) {
+    drawDamageOverlay(g, cx, cy);
+  }
+
+  const label = new Text({
+    text: kind.charAt(0).toUpperCase() + kind.slice(1).replace('Hub', ' Hub'),
+    style: LABEL_STYLE,
+  });
+  label.anchor.set(0.5, 0);
+  label.position.set(cx, cy + SIZE + 6);
+  scene.addChild(label);
+}
+
+function kindFromString(str: string): FacilityKind | undefined {
+  const normalized = str.toLowerCase();
+  // Accept both "railHub" and "railhub"
+  const map: Record<string, FacilityKind> = {
+    depot: 'depot',
+    factory: 'factory',
+    railhub: 'railHub',
+    port: 'port',
+  };
+  return map[normalized];
+}
+
+const factory: ComponentFactory = async (container, props) => {
+  const singleKind = props.type ? kindFromString(props.type) : undefined;
+  const isSingle = singleKind !== undefined;
+
+  const canvasW = isSingle ? CANVAS_W_SINGLE : CANVAS_W;
+  const canvasH = isSingle ? CANVAS_H_SINGLE : CANVAS_H;
+
   const app = new Application();
   await app.init({
-    width: CANVAS_W,
-    height: CANVAS_H,
+    width: canvasW,
+    height: canvasH,
     background: 0x12121e,
     antialias: true,
   });
@@ -210,7 +270,11 @@ const factory: ComponentFactory = async (container) => {
   let damaged = false;
   const storage: Record<string, number> = { fuel: 0.8, ammo: 0.6, food: 0.9, parts: 0.4 };
 
-  redraw(scene, g, damaged, storage);
+  if (isSingle) {
+    redrawSingle(scene, g, singleKind, damaged, storage);
+  } else {
+    redraw(scene, g, damaged, storage);
+  }
 
   // Controls
   const controls = document.createElement('div');
@@ -222,7 +286,11 @@ const factory: ComponentFactory = async (container) => {
   damageCheck.type = 'checkbox';
   damageCheck.addEventListener('change', () => {
     damaged = damageCheck.checked;
-    redraw(scene, g, damaged, storage);
+    if (isSingle) {
+      redrawSingle(scene, g, singleKind, damaged, storage);
+    } else {
+      redraw(scene, g, damaged, storage);
+    }
   });
   damageLabel.appendChild(damageCheck);
   damageLabel.append(' Damaged');
@@ -239,7 +307,11 @@ const factory: ComponentFactory = async (container) => {
     slider.value = String(Math.round(storage[key] * 100));
     slider.addEventListener('input', () => {
       storage[key] = Number(slider.value) / 100;
-      redraw(scene, g, damaged, storage);
+      if (isSingle) {
+        redrawSingle(scene, g, singleKind, damaged, storage);
+      } else {
+        redraw(scene, g, damaged, storage);
+      }
     });
     sliderLabel.appendChild(slider);
     controls.appendChild(sliderLabel);

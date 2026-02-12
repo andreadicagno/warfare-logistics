@@ -8,6 +8,8 @@ Facilities are the nodes of the supply network. They store resources, produce go
 
 ### Depot
 
+<!-- component: facility-preview type=depot -->
+
 The basic storage facility. Depots receive resources from the supply chain and distribute them to nearby units.
 
 | Property | Value |
@@ -18,6 +20,8 @@ The basic storage facility. Depots receive resources from the supply chain and d
 | Build Time | 3 days |
 
 ### Factory
+
+<!-- component: facility-preview type=factory -->
 
 Produces one resource type from raw materials. Factories require a steady supply of parts and fuel to operate.
 
@@ -30,6 +34,8 @@ Produces one resource type from raw materials. Factories require a steady supply
 
 ### Rail Hub
 
+<!-- component: facility-preview type=railHub -->
+
 A high-throughput transfer station that connects railway lines. Essential for long-distance supply chains.
 
 | Property | Value |
@@ -40,6 +46,8 @@ A high-throughput transfer station that connects railway lines. Essential for lo
 | Build Time | 5 days |
 
 ### Port
+
+<!-- component: facility-preview type=port -->
 
 Coastal facility for sea-based supply. Connects land and sea routes.
 

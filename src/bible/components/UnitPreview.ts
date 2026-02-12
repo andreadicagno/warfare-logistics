@@ -54,6 +54,17 @@ const PIP_STYLE = new TextStyle({
 
 const CANVAS_W = 260;
 const CANVAS_H = 140;
+const CANVAS_W_SINGLE = 140;
+const CANVAS_H_SINGLE = 130;
+
+function clearScene(scene: Container, g: Graphics): void {
+  g.clear();
+  while (scene.children.length > 1) {
+    const child = scene.children[scene.children.length - 1];
+    child.destroy();
+    scene.removeChildAt(scene.children.length - 1);
+  }
+}
 
 function drawUnit(
   scene: Container,
@@ -62,17 +73,11 @@ function drawUnit(
   faction: Faction,
   echelon: Echelon,
   supplies: Record<string, number>,
+  canvasWidth = CANVAS_W,
 ): void {
-  g.clear();
+  clearScene(scene, g);
 
-  // Remove old text children (keep graphics at index 0)
-  while (scene.children.length > 1) {
-    const child = scene.children[scene.children.length - 1];
-    child.destroy();
-    scene.removeChildAt(scene.children.length - 1);
-  }
-
-  const cx = CANVAS_W / 2;
+  const cx = canvasWidth / 2;
   const cy = 50;
   const bgColor = faction === 'allied' ? ALLIED_COLOR : ENEMY_COLOR;
   const alpha = faction === 'enemy' ? ENEMY_ALPHA : 1;
@@ -160,11 +165,26 @@ function drawUnit(
   scene.addChild(label);
 }
 
-const factory: ComponentFactory = async (container) => {
+function unitTypeFromString(str: string): UnitType | undefined {
+  const map: Record<string, UnitType> = {
+    infantry: 'infantry',
+    armor: 'armor',
+    artillery: 'artillery',
+  };
+  return map[str.toLowerCase()];
+}
+
+const factory: ComponentFactory = async (container, props) => {
+  const singleType = props.type ? unitTypeFromString(props.type) : undefined;
+  const isSingle = singleType !== undefined;
+
+  const canvasW = isSingle ? CANVAS_W_SINGLE : CANVAS_W;
+  const canvasH = isSingle ? CANVAS_H_SINGLE : CANVAS_H;
+
   const app = new Application();
   await app.init({
-    width: CANVAS_W,
-    height: CANVAS_H,
+    width: canvasW,
+    height: canvasH,
     background: 0x12121e,
     antialias: true,
   });
@@ -177,33 +197,36 @@ const factory: ComponentFactory = async (container) => {
   const g = new Graphics();
   scene.addChild(g);
 
-  let unitType: UnitType = 'infantry';
+  let unitType: UnitType = singleType ?? 'infantry';
   let faction: Faction = 'allied';
   let echelon: Echelon = 'battalion';
   const supplies: Record<string, number> = { fuel: 0.8, ammo: 0.6, food: 0.9, parts: 0.4 };
 
-  drawUnit(scene, g, unitType, faction, echelon, supplies);
+  const redraw = () => drawUnit(scene, g, unitType, faction, echelon, supplies, canvasW);
+  redraw();
 
   // Controls
   const controls = document.createElement('div');
   controls.className = 'controls';
 
-  // Type dropdown
-  const typeLabel = document.createElement('label');
-  typeLabel.textContent = 'Type: ';
-  const typeSelect = document.createElement('select');
-  for (const t of ['infantry', 'armor', 'artillery'] as const) {
-    const opt = document.createElement('option');
-    opt.value = t;
-    opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
-    typeSelect.appendChild(opt);
+  // Type dropdown (only in overview mode)
+  if (!isSingle) {
+    const typeLabel = document.createElement('label');
+    typeLabel.textContent = 'Type: ';
+    const typeSelect = document.createElement('select');
+    for (const t of ['infantry', 'armor', 'artillery'] as const) {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+      typeSelect.appendChild(opt);
+    }
+    typeSelect.addEventListener('change', () => {
+      unitType = typeSelect.value as UnitType;
+      redraw();
+    });
+    typeLabel.appendChild(typeSelect);
+    controls.appendChild(typeLabel);
   }
-  typeSelect.addEventListener('change', () => {
-    unitType = typeSelect.value as UnitType;
-    drawUnit(scene, g, unitType, faction, echelon, supplies);
-  });
-  typeLabel.appendChild(typeSelect);
-  controls.appendChild(typeLabel);
 
   // Faction dropdown
   const factionLabel = document.createElement('label');
@@ -217,7 +240,7 @@ const factory: ComponentFactory = async (container) => {
   }
   factionSelect.addEventListener('change', () => {
     faction = factionSelect.value as Faction;
-    drawUnit(scene, g, unitType, faction, echelon, supplies);
+    redraw();
   });
   factionLabel.appendChild(factionSelect);
   controls.appendChild(factionLabel);
@@ -234,7 +257,7 @@ const factory: ComponentFactory = async (container) => {
   }
   echelonSelect.addEventListener('change', () => {
     echelon = echelonSelect.value as Echelon;
-    drawUnit(scene, g, unitType, faction, echelon, supplies);
+    redraw();
   });
   echelonLabel.appendChild(echelonSelect);
   controls.appendChild(echelonLabel);
@@ -250,7 +273,7 @@ const factory: ComponentFactory = async (container) => {
     slider.value = String(Math.round(supplies[key] * 100));
     slider.addEventListener('input', () => {
       supplies[key] = Number(slider.value) / 100;
-      drawUnit(scene, g, unitType, faction, echelon, supplies);
+      redraw();
     });
     sliderLabel.appendChild(slider);
     controls.appendChild(sliderLabel);

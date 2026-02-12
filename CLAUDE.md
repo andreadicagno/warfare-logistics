@@ -185,6 +185,20 @@ All in `docs/plans/`:
 - `2025-02-11-map-visual-polish-design.md` — Map visual polish design
 - `2025-02-11-map-visual-polish-implementation.md` — Map visual polish implementation plan
 
+## Game Bible
+
+The game bible in `docs/bible/` is the source of truth for game design specs. Pages:
+- `terrain.md` — Terrain types, colors, movement costs, patterns
+- `facilities.md` — Facility types, icons, resource bars, damage
+- `mechanics.md` — Game rules and systems
+- `factions.md` — Faction definitions and territory
+- `map-generation.md` — Map generation pipeline
+
+When modifying game mechanics, terrain types, facility types, or other game systems:
+- Read the relevant bible page first to understand current specs
+- Update the bible page to reflect any changes made to the code
+- Keep preview components (`TerrainPreview`, `FacilityPreview`) in sync with actual rendering code
+
 ## Research Sources
 
 Reference materials in `docs/sources/`:

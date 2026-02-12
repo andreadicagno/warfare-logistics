@@ -2,11 +2,23 @@
 
 Military units are the consumers of supply. They are represented on the map using NATO-standard military symbols.
 
-## Unit Types
+## Overview
 
 <!-- component: unit-preview -->
 
-### Infantry
+| Type | Symbol | Movement | Fuel Use | Ammo Use |
+|------|--------|----------|----------|----------|
+| Infantry | X (diagonal cross) | Slow | Low | Medium |
+| Armor | Diagonal slash | Fast | High | Medium |
+| Artillery | Filled circle | Very Slow | Low | Very High |
+
+Status: `[IMPLEMENTED]`
+
+---
+
+## Infantry
+
+<!-- component: unit-preview type=infantry -->
 
 Standard ground forces. High food consumption, moderate ammo usage.
 
@@ -17,7 +29,11 @@ Standard ground forces. High food consumption, moderate ammo usage.
 | Fuel Use | Low |
 | Ammo Use | Medium |
 
-### Armor
+Visual: Two diagonal lines crossing inside the NATO box, forming an X. Stroke width 1.5px, light color (`0xdddddd`).
+
+## Armor
+
+<!-- component: unit-preview type=armor -->
 
 Mechanized forces. High fuel consumption, moderate ammo usage.
 
@@ -28,7 +44,11 @@ Mechanized forces. High fuel consumption, moderate ammo usage.
 | Fuel Use | High |
 | Ammo Use | Medium |
 
-### Artillery
+Visual: Single diagonal line from bottom-left to top-right inside the NATO box. Stroke width 2px, light color (`0xdddddd`).
+
+## Artillery
+
+<!-- component: unit-preview type=artillery -->
 
 Fire support units. Very high ammo consumption, low mobility.
 
@@ -38,6 +58,10 @@ Fire support units. Very high ammo consumption, low mobility.
 | Movement | Very Slow |
 | Fuel Use | Low |
 | Ammo Use | Very High |
+
+Visual: Filled circle (6px radius) centered inside the NATO box. Light color (`0xdddddd`).
+
+---
 
 ## Echelons
 
@@ -63,5 +87,5 @@ Echelons represent the size of a unit formation. Pips (marks) above the NATO box
 Allied battalions display 4 horizontal supply bars below their NATO box:
 - Bar height: 4px, gap: 2px
 - Colors: Fuel (`0xccaa22`), Ammo (`0x666666`), Food (`0x44aa44`), Parts (`0xcc8833`)
-
-Status: `[IMPLEMENTED]`
+- Background: `0x333333`
+- Pulsing animation when supply is low (< 40%: slow pulse, < 20%: fast pulse)
