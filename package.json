@@ -21,6 +21,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "marked": "^17.0.2",
     "pixi.js": "^8.16.0",
     "simplex-noise": "^4.0.3"
   },

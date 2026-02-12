@@ -19,7 +19,8 @@
       "@core/*": ["src/core/*"],
       "@game/*": ["src/game/*"],
       "@ui/*": ["src/ui/*"],
-      "@data/*": ["src/data/*"]
+      "@data/*": ["src/data/*"],
+      "@bible/*": ["src/bible/*"]
     }
   },
   "include": ["src"]
