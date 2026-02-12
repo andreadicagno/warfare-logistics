@@ -1,6 +1,7 @@
 import './styles.css';
 import './components/TerrainPreview';
 import './components/SupplyLinePreview';
+import './components/FacilityPreview';
 import { findMarkerElements, renderMarkdown } from './markdownLoader';
 import { mountComponents } from './mountComponent';
 
@@ -25,6 +26,11 @@ const pages: BiblePage[] = [
     slug: 'supply-lines',
     title: 'Supply Lines',
     load: () => import('../../docs/bible/supply-lines.md?raw').then((m) => m.default),
+  },
+  {
+    slug: 'facilities',
+    title: 'Facilities',
+    load: () => import('../../docs/bible/facilities.md?raw').then((m) => m.default),
   },
 ];
 
