@@ -6,8 +6,7 @@ export interface DebugInfo {
   cursorHex: HexCoord | null;
   visibleCells: number;
   cell: HexCell | null;
-  hasRoad: boolean;
-  hasRailway: boolean;
+  supplyLineLevel: number | null;
 }
 
 export class DebugOverlay {
@@ -54,8 +53,7 @@ export class DebugOverlay {
         `Elevation: ${c.elevation.toFixed(2)}`,
         `Moisture: ${c.moisture.toFixed(2)}`,
         `Navigable: ${c.navigable ? 'yes' : 'no'}`,
-        `Road: ${info.hasRoad ? 'yes' : 'no'}`,
-        `Railway: ${info.hasRailway ? 'yes' : 'no'}`,
+        `Supply Line: ${info.supplyLineLevel ? `Lv${info.supplyLineLevel}` : 'none'}`,
         `Urban: ${c.urbanClusterId ?? 'none'}`,
       );
     } else if (info.cursorHex) {

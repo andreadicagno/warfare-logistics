@@ -117,17 +117,16 @@ export class Game {
 
     const hex = this.mapRenderer.hoveredHex;
     let cell: HexCell | null = null;
-    let hasRoad = false;
-    let hasRailway = false;
+    let supplyLineLevel: number | null = null;
 
     if (hex) {
       const key = `${hex.q},${hex.r}`;
       cell = this.map.cells.get(key) ?? null;
       if (cell) {
-        hasRoad = this.map.roads.some((r) => r.hexes.some((h) => h.q === hex.q && h.r === hex.r));
-        hasRailway = this.map.railways.some((r) =>
-          r.hexes.some((h) => h.q === hex.q && h.r === hex.r),
+        const line = this.map.supplyLines.find((l) =>
+          l.hexes.some((h) => h.q === hex.q && h.r === hex.r),
         );
+        supplyLineLevel = line?.level ?? null;
       }
     }
 
@@ -137,8 +136,7 @@ export class Game {
       cursorHex: hex,
       visibleCells: this.mapRenderer.visibleCellCount,
       cell,
-      hasRoad,
-      hasRailway,
+      supplyLineLevel,
     };
 
     this.debugOverlay.update(info);
