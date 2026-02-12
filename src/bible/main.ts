@@ -50,6 +50,16 @@ const pages: BiblePage[] = [
     title: 'Factions',
     load: () => import('../../docs/bible/factions.md?raw').then((m) => m.default),
   },
+  {
+    slug: 'mechanics',
+    title: 'Mechanics',
+    load: () => import('../../docs/bible/mechanics.md?raw').then((m) => m.default),
+  },
+  {
+    slug: 'map-generation',
+    title: 'Map Generation',
+    load: () => import('../../docs/bible/map-generation.md?raw').then((m) => m.default),
+  },
 ];
 
 const nav = document.getElementById('bible-nav')!;
