@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { ResourceType } from '@data/types';
+import { describe, expect, it } from 'vitest';
 import { ProductionPhase } from '../ProductionPhase';
 import type { PlacedFactory } from '../types';
 import { TICKS_PER_DAY } from '../types';

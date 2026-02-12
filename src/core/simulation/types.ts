@@ -1,6 +1,6 @@
 import type { HexCoord } from '@core/map/types';
-import { ResourceType } from '@data/types';
 import type { ResourceStorage } from '@data/types';
+import { ResourceType } from '@data/types';
 
 // ── Bible Tables ──
 
