@@ -1,5 +1,6 @@
 import './styles.css';
 import './components/TerrainPreview';
+import './components/SupplyLinePreview';
 import { findMarkerElements, renderMarkdown } from './markdownLoader';
 import { mountComponents } from './mountComponent';
 
@@ -19,6 +20,11 @@ const pages: BiblePage[] = [
     slug: 'terrain',
     title: 'Terrain',
     load: () => import('../../docs/bible/terrain.md?raw').then((m) => m.default),
+  },
+  {
+    slug: 'supply-lines',
+    title: 'Supply Lines',
+    load: () => import('../../docs/bible/supply-lines.md?raw').then((m) => m.default),
   },
 ];
 
