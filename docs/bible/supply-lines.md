@@ -1,89 +1,69 @@
 # Supply Lines
 
-Supply lines are the arteries of the logistics network, connecting facilities and enabling resource flow. They come in 5 levels, each with increasing capacity and visual complexity.
+Supply lines are abstract logistics infrastructure built **hex-by-hex** on the map. They form a branching network with forks and intersections. Resources travel through them as **physical particles** with real transit time.
 
-## Level 1: Trail
+## Levels
 
-<!-- component: supply-line level=1 -->
+| Level | Capacity/day | Speed (hex/hr) | Cost CP/hex | Build Time/hex |
+|-------|-------------|----------------|-------------|----------------|
+| 1 | 30 | 5 | 5 | 4 hours |
+| 2 | 80 | 8 | 15 | 8 hours |
+| 3 | 180 | 12 | 30 | 16 hours |
+| 4 | 350 | 17 | 50 | 1 day |
+| 5 | 600 | 24 | 80 | 2 days |
 
-| Property | Value |
-|----------|-------|
-| Capacity | 10 units/day |
-| Build Time | 1 day |
-| Visual | Dashed tan line |
-| Color | `0xc2a66c` |
-| Width | 2px |
+Status: `[DESIGN COMPLETE]`
 
-Status: `[IMPLEMENTED]`
+## Construction
 
-## Level 2: Road
+- **Hex-by-hex**: the player traces a path on the map. Each hex crossed costs CP/hex of the chosen level. An 8-hex line at lv2 = 8 × 15 = 120 CP
+- **Branching network**: forks and intersections are free. Nodes where branches meet distribute flow automatically
+- **Terrain cost**: River hex costs **2x CP** (bridge required). Hills hex costs **1.5x CP**
+- **Placement**: passable hexes only (not Water, not Mountain)
 
-<!-- component: supply-line level=2 -->
+## Transit Time
 
-| Property | Value |
-|----------|-------|
-| Capacity | 25 units/day |
-| Build Time | 3 days |
-| Visual | Bordered road |
-| Border | `0x4a3f2f` (5px) |
-| Fill | `0xc2ae6c` (3px) |
+Resources take real time to travel. They are **in transit** inside the supply line — a real pipeline.
 
-Status: `[IMPLEMENTED]`
+| Example | Distance | Level | Speed | Transit Time |
+|---------|----------|-------|-------|-------------|
+| Short haul | 20 hex | lv3 | 12 hex/hr | 1.7 hours |
+| Medium haul | 60 hex | lv3 | 12 hex/hr | 5 hours |
+| Long haul | 60 hex | lv1 | 5 hex/hr | 12 hours |
+| Express haul | 60 hex | lv5 | 24 hex/hr | 2.5 hours |
 
-## Level 3: Dual Carriageway
+## Bottlenecks
 
-<!-- component: supply-line level=3 -->
+In a network with mixed-level segments, the effective capacity is that of the **weakest segment** along the path. The slowest segment's speed slows transit through that section.
 
-| Property | Value |
-|----------|-------|
-| Capacity | 60 units/day |
-| Build Time | 5 days |
-| Visual | Two parallel lanes |
-| Color | `0x999999` |
-| Width | 3px per lane |
-| Offset | 2px |
+## Upgrade
 
-Status: `[IMPLEMENTED]`
+Individual segments or entire stretches can be upgraded. During upgrade, the segment operates at **50% capacity**. Speed unchanged.
 
-## Level 4: Railway
+## Damage
 
-<!-- component: supply-line level=4 -->
+Bombardment hits **specific segments** (1-3 hexes). A blown bridge, a damaged stretch.
 
-| Property | Value |
-|----------|-------|
-| Capacity | 150 units/day |
-| Build Time | 10 days |
-| Visual | Rail with crossties |
-| Border | `0x2a2a35` (5px) |
-| Fill | `0x8888a0` (3px) |
-| Tie Spacing | 10px |
+- Damaged segment loses capacity (percentage)
+- If destroyed at 100%, flow stops at that point — resources must find an alternative path (if a branch exists) or flow halts
+- Resources in transit in the destroyed segment are **lost**
+- Repair costs CP proportional to damage and segment level
 
-Status: `[IMPLEMENTED]`
+## Visual Feedback
 
-## Level 5: Logistics Corridor
+- **Physical particles**: each resource produced at a factory becomes a visible particle (resource color) that travels hex-by-hex along the supply line
+- **Particle lifecycle**: born at factory → travels through network → slows at bottlenecks → queues if saturated → arrives at depot (only then depot stock increments)
+- **Saturation readable from flow**: sparse particles = under-utilized. Dense, slow-moving particles = saturated/bottleneck. No artificial color on the line
+- **Neutral line visual**: the line itself reflects only its level (thickness, style), not load
+- **Destruction**: destroyed segment → particles in that stretch disappear, upstream particles stop and accumulate
+- **Bidirectional**: if the line carries in both directions, particles visible moving both ways
 
-<!-- component: supply-line level=5 -->
+## Health States (visual)
 
-| Property | Value |
-|----------|-------|
-| Capacity | 400 units/day |
-| Build Time | 15 days |
-| Visual | Railway + road side by side |
-| Corridor Offset | 3px |
+Supply line visual is neutral — no color coding for load. Damage only:
 
-Status: `[IMPLEMENTED]`
-
-## Health States
-
-Supply lines degrade under enemy action or overuse:
-
-| State | Color | Effect |
-|-------|-------|--------|
-| Good | `0x4a8c3f` | Full capacity |
-| Congested | `0xc8a832` | 75% capacity |
-| Stressed | `0xb83a3a` | 50% capacity |
-| Destroyed | `0x666666` | 0% capacity, 50% alpha |
-
-## Bridges
-
-When a supply line crosses a river hex, a bridge marker (`0x8b7355`) is drawn at the crossing point. Bridges are vulnerable to bombardment.
+| State | Visual |
+|-------|--------|
+| Intact | Normal level-based visual |
+| Damaged | Red flash overlay on affected hexes |
+| Destroyed | Dashed grey line with red X at break point |
