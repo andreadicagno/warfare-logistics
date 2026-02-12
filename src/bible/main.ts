@@ -4,6 +4,7 @@ import './components/SupplyLinePreview';
 import './components/FacilityPreview';
 import './components/UnitPreview';
 import './components/ResourcePreview';
+import './components/FactionPreview';
 import { findMarkerElements, renderMarkdown } from './markdownLoader';
 import { mountComponents } from './mountComponent';
 
@@ -43,6 +44,11 @@ const pages: BiblePage[] = [
     slug: 'resources',
     title: 'Resources',
     load: () => import('../../docs/bible/resources.md?raw').then((m) => m.default),
+  },
+  {
+    slug: 'factions',
+    title: 'Factions',
+    load: () => import('../../docs/bible/factions.md?raw').then((m) => m.default),
   },
 ];
 
