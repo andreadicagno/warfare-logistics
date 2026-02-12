@@ -1,4 +1,4 @@
-import type { HexCoord, RoutePath } from '@core/map/types';
+import type { HexCoord, SupplyLine } from '@core/map/types';
 import type { ResourceStorage } from '@data/types';
 
 export type Faction = 'allied' | 'enemy';
@@ -43,15 +43,15 @@ export interface MockFacility {
 
 export type RouteHealth = 'good' | 'congested' | 'stressed' | 'destroyed';
 
-export interface MockRouteState {
-  route: RoutePath;
+export interface MockSupplyLineState {
+  supplyLine: SupplyLine;
   health: RouteHealth;
 }
 
 export interface MockVehicle {
   id: string;
   type: 'truck' | 'train';
-  routeIndex: number; // index into roads[] or railways[]
+  lineIndex: number; // index into GameMap.supplyLines[]
   t: number; // 0-1 position along spline
   speed: number; // px/s
   direction: 1 | -1; // forward or return trip
@@ -60,7 +60,6 @@ export interface MockVehicle {
 export interface AccessRamp {
   facilityCoord: HexCoord;
   routeHexCoord: HexCoord;
-  routeType: 'road' | 'railway';
 }
 
 export interface MockState {
@@ -69,7 +68,7 @@ export interface MockState {
   units: MockUnit[];
   formations: MockFormation[];
   facilities: MockFacility[];
-  routeStates: MockRouteState[];
+  supplyLineStates: MockSupplyLineState[];
   vehicles: MockVehicle[];
   accessRamps: AccessRamp[];
   version: number; // increments on state change (for rebuild detection)
