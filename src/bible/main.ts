@@ -1,4 +1,5 @@
 import './styles.css';
+import './components/TerrainPreview';
 import { findMarkerElements, renderMarkdown } from './markdownLoader';
 import { mountComponents } from './mountComponent';
 
@@ -13,6 +14,11 @@ const pages: BiblePage[] = [
     slug: 'index',
     title: 'Overview',
     load: () => import('../../docs/bible/index.md?raw').then((m) => m.default),
+  },
+  {
+    slug: 'terrain',
+    title: 'Terrain',
+    load: () => import('../../docs/bible/terrain.md?raw').then((m) => m.default),
   },
 ];
 
