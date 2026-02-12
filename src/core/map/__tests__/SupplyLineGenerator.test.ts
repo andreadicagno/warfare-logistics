@@ -1,26 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { HexGrid } from '../HexGrid';
 import { RiverGenerator } from '../RiverGenerator';
-import { RoadGenerator } from '../RoadGenerator';
+import { SupplyLineGenerator } from '../SupplyLineGenerator';
 import { SmoothingPass } from '../SmoothingPass';
 import { TerrainGenerator } from '../TerrainGenerator';
-import type { HexCell, RoadParams, UrbanCluster } from '../types';
+import type { HexCell, SupplyLineParams, UrbanCluster } from '../types';
 import { DEFAULT_GENERATION_PARAMS, TerrainType } from '../types';
 import { UrbanGenerator } from '../UrbanGenerator';
 
-const defaultRoadParams = DEFAULT_GENERATION_PARAMS.roads;
+const defaultSupplyLineParams = DEFAULT_GENERATION_PARAMS.supplyLines;
 
-function roadParamsWithInfra(infrastructure: RoadParams['infrastructure']): RoadParams {
-  return { ...defaultRoadParams, infrastructure };
+function supplyLineParamsWithInfra(
+  infrastructure: SupplyLineParams['infrastructure'],
+): SupplyLineParams {
+  return { ...defaultSupplyLineParams, infrastructure };
 }
 
 const defaultTerrainCost: Record<TerrainType, number> = {
-  [TerrainType.Plains]: defaultRoadParams.plainsCost,
-  [TerrainType.Forest]: defaultRoadParams.forestCost,
-  [TerrainType.Hills]: defaultRoadParams.hillsCost,
-  [TerrainType.Marsh]: defaultRoadParams.marshCost,
-  [TerrainType.River]: defaultRoadParams.riverCost,
-  [TerrainType.Urban]: defaultRoadParams.urbanCost,
+  [TerrainType.Plains]: defaultSupplyLineParams.plainsCost,
+  [TerrainType.Forest]: defaultSupplyLineParams.forestCost,
+  [TerrainType.Hills]: defaultSupplyLineParams.hillsCost,
+  [TerrainType.Marsh]: defaultSupplyLineParams.marshCost,
+  [TerrainType.River]: defaultSupplyLineParams.riverCost,
+  [TerrainType.Urban]: defaultSupplyLineParams.urbanCost,
   [TerrainType.Mountain]: Infinity,
   [TerrainType.Water]: Infinity,
 };
@@ -39,61 +41,75 @@ function makeMap(): { cells: Map<string, HexCell>; clusters: UrbanCluster[] } {
   return { cells, clusters };
 }
 
-describe('RoadGenerator', () => {
+describe('SupplyLineGenerator', () => {
   describe('generate', () => {
-    it('produces road routes', () => {
+    it('produces supply lines', () => {
       const { cells, clusters } = makeMap();
-      const { roads } = RoadGenerator.generate(
+      const lines = SupplyLineGenerator.generate(
         cells,
         40,
         30,
-        roadParamsWithInfra('basic'),
+        supplyLineParamsWithInfra('basic'),
         clusters,
       );
-      expect(roads.length).toBeGreaterThan(0);
+      expect(lines.length).toBeGreaterThan(0);
     });
 
-    it('all roads have type road', () => {
+    it('all lines are level 1', () => {
       const { cells, clusters } = makeMap();
-      const { roads } = RoadGenerator.generate(
+      const lines = SupplyLineGenerator.generate(
         cells,
         40,
         30,
-        roadParamsWithInfra('basic'),
+        supplyLineParamsWithInfra('basic'),
         clusters,
       );
-      for (const road of roads) {
-        expect(road.type).toBe('road');
+      for (const line of lines) {
+        expect(line.level).toBe(1);
       }
     });
 
-    it('road paths contain only adjacent hexes', () => {
+    it('all lines are active', () => {
       const { cells, clusters } = makeMap();
-      const { roads } = RoadGenerator.generate(
+      const lines = SupplyLineGenerator.generate(
         cells,
         40,
         30,
-        roadParamsWithInfra('basic'),
+        supplyLineParamsWithInfra('basic'),
         clusters,
       );
-      for (const road of roads) {
-        for (let i = 1; i < road.hexes.length; i++) {
-          expect(HexGrid.distance(road.hexes[i - 1], road.hexes[i])).toBe(1);
+      for (const line of lines) {
+        expect(line.state).toBe('active');
+      }
+    });
+
+    it('paths contain only adjacent hexes', () => {
+      const { cells, clusters } = makeMap();
+      const lines = SupplyLineGenerator.generate(
+        cells,
+        40,
+        30,
+        supplyLineParamsWithInfra('basic'),
+        clusters,
+      );
+      for (const line of lines) {
+        for (let i = 1; i < line.hexes.length; i++) {
+          expect(HexGrid.distance(line.hexes[i - 1], line.hexes[i])).toBe(1);
         }
       }
     });
 
-    it('roads avoid mountains and water', () => {
+    it('lines avoid mountains and water', () => {
       const { cells, clusters } = makeMap();
-      const { roads } = RoadGenerator.generate(
+      const lines = SupplyLineGenerator.generate(
         cells,
         40,
         30,
-        roadParamsWithInfra('basic'),
+        supplyLineParamsWithInfra('basic'),
         clusters,
       );
-      for (const road of roads) {
-        for (const hex of road.hexes) {
+      for (const line of lines) {
+        for (const hex of line.hexes) {
           const cell = cells.get(HexGrid.key(hex))!;
           expect(cell.terrain).not.toBe(TerrainType.Mountain);
           expect(cell.terrain).not.toBe(TerrainType.Water);
@@ -101,57 +117,44 @@ describe('RoadGenerator', () => {
       }
     });
 
-    it('produces no railways with infrastructure=none', () => {
+    it('produces no extra lines with infrastructure=none', () => {
       const { cells, clusters } = makeMap();
-      const { railways } = RoadGenerator.generate(
+      const noneLines = SupplyLineGenerator.generate(
         cells,
         40,
         30,
-        roadParamsWithInfra('none'),
+        supplyLineParamsWithInfra('none'),
         clusters,
       );
-      expect(railways.length).toBe(0);
-    });
-
-    it('produces MST trunk railways with infrastructure=basic', () => {
-      const { cells, clusters } = makeMap();
-      const { railways } = RoadGenerator.generate(
+      const basicLines = SupplyLineGenerator.generate(
         cells,
         40,
         30,
-        roadParamsWithInfra('basic'),
+        supplyLineParamsWithInfra('basic'),
         clusters,
       );
-      // MST produces N-1 edges for N major centers — should have at least 1 railway segment
-      expect(railways.length).toBeGreaterThanOrEqual(1);
+      // With 'none', only road lines (no railways) should be produced
+      expect(noneLines.length).toBeLessThan(basicLines.length);
     });
 
-    it('produces more railways with infrastructure=developed than basic', () => {
+    it('produces more lines with developed infrastructure', () => {
       const { cells, clusters } = makeMap();
-      const basic = RoadGenerator.generate(cells, 40, 30, roadParamsWithInfra('basic'), clusters);
-      const developed = RoadGenerator.generate(
+      const basicLines = SupplyLineGenerator.generate(
         cells,
         40,
         30,
-        roadParamsWithInfra('developed'),
+        supplyLineParamsWithInfra('basic'),
+        clusters,
+      );
+      const developedLines = SupplyLineGenerator.generate(
+        cells,
+        40,
+        30,
+        supplyLineParamsWithInfra('developed'),
         clusters,
       );
       // Developed adds redundancy edges + town branches on top of MST
-      expect(developed.railways.length).toBeGreaterThanOrEqual(basic.railways.length);
-    });
-
-    it('all railways have type railway', () => {
-      const { cells, clusters } = makeMap();
-      const { railways } = RoadGenerator.generate(
-        cells,
-        40,
-        30,
-        roadParamsWithInfra('developed'),
-        clusters,
-      );
-      for (const rail of railways) {
-        expect(rail.type).toBe('railway');
-      }
+      expect(developedLines.length).toBeGreaterThanOrEqual(basicLines.length);
     });
   });
 
@@ -170,7 +173,7 @@ describe('RoadGenerator', () => {
           });
         }
       }
-      const path = RoadGenerator.astar(
+      const path = SupplyLineGenerator.astar(
         { q: 0, r: 0 },
         { q: 2, r: 0 },
         cells,
@@ -208,7 +211,7 @@ describe('RoadGenerator', () => {
           urbanClusterId: null,
         });
       }
-      const path = RoadGenerator.astar(
+      const path = SupplyLineGenerator.astar(
         { q: 0, r: 0 },
         { q: 2, r: 2 },
         cells,
@@ -240,7 +243,7 @@ describe('RoadGenerator', () => {
       existingEdges.add(edgeKey(HexGrid.key({ q: 0, r: 0 }), HexGrid.key({ q: 1, r: 0 })));
       existingEdges.add(edgeKey(HexGrid.key({ q: 1, r: 0 }), HexGrid.key({ q: 2, r: 0 })));
 
-      const pathWithReuse = RoadGenerator.astar(
+      const pathWithReuse = SupplyLineGenerator.astar(
         { q: 0, r: 0 },
         { q: 2, r: 0 },
         cells,
