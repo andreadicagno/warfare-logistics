@@ -10,6 +10,8 @@ import { HexRenderer } from '../HexRenderer';
 import { SelectionLayer } from '../layers/SelectionLayer';
 import { TerrainLayer } from '../layers/TerrainLayer';
 import { BuildToolbar } from './BuildToolbar';
+import type { TimeSpeed } from './TimeControls';
+import { TimeControls } from './TimeControls';
 
 const PLAYGROUND_SEED = 42;
 const PLAYGROUND_MAP_SIZE = { width: 60, height: 45 };
@@ -25,6 +27,10 @@ export class PlaygroundPage {
   private boundOnFrame!: () => void;
   private toolbar!: BuildToolbar;
   private _currentTool: BuildTool = 'select';
+  private timeControls!: TimeControls;
+  private isPlaying = false;
+  private tickSpeed: TimeSpeed = 1;
+  private tickAccumulator = 0;
 
   constructor(app: Application) {
     this.app = app;
@@ -84,12 +90,28 @@ export class PlaygroundPage {
     // Attach camera controls
     this.camera.attach();
 
-    // Build toolbar
+    // HTML overlays (toolbar + time controls)
     const htmlContainer = this.app.canvas.parentElement;
     if (htmlContainer) {
       this.toolbar = new BuildToolbar(htmlContainer, (tool) => {
         this._currentTool = tool;
       });
+
+      this.timeControls = new TimeControls(
+        htmlContainer,
+        (action) => {
+          if (action === 'step') {
+            this._simulation.tick();
+          } else if (action === 'play') {
+            this.isPlaying = true;
+          } else {
+            this.isPlaying = false;
+          }
+        },
+        (speed) => {
+          this.tickSpeed = speed;
+        },
+      );
     }
 
     // Pointer tracking for hex hover
@@ -111,17 +133,30 @@ export class PlaygroundPage {
   };
 
   private onFrame(): void {
+    const dt = this.app.ticker.deltaMS / 1000;
+
     if (this.camera.isDirty) {
       const bounds = this.camera.getVisibleBounds();
       this.terrainLayer.build(bounds);
       this.camera.clearDirty();
     }
+
+    if (this.isPlaying) {
+      this.tickAccumulator += dt * this.tickSpeed;
+      while (this.tickAccumulator >= 1) {
+        this._simulation.tick();
+        this.tickAccumulator -= 1;
+      }
+    }
+
+    this.timeControls?.updateTick(this._simulation.state.tick);
   }
 
   destroy(): void {
     this.app.ticker.remove(this.boundOnFrame);
     this.app.stage.off('pointermove', this.onPointerMove);
     this.toolbar?.destroy();
+    this.timeControls?.destroy();
     this.camera.detach();
     this.terrainLayer.destroy();
     this.selectionLayer.destroy();
