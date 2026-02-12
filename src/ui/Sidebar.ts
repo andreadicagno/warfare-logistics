@@ -96,7 +96,7 @@ export class Sidebar {
   private waterBonus!: SliderRow;
   private plainsBonus!: SliderRow;
 
-  // Road controls
+  // Supply line controls
   private infrastructureSelect!: HTMLSelectElement;
   private plainsCost!: SliderRow;
   private forestCost!: SliderRow;
@@ -105,9 +105,8 @@ export class Sidebar {
   private riverCost!: SliderRow;
   private urbanCost!: SliderRow;
   private cityConnectionDistance!: SliderRow;
-  private railwayRedundancy!: SliderRow;
-  private roadReuseCost!: SliderRow;
-  private railwayReuseCost!: SliderRow;
+  private redundancy!: SliderRow;
+  private reuseCost!: SliderRow;
 
   constructor(
     parent: HTMLElement,
@@ -208,7 +207,7 @@ export class Sidebar {
     this.buildSmoothingSection(scrollArea);
     this.buildRiversSection(scrollArea);
     this.buildUrbanSection(scrollArea);
-    this.buildRoadsSection(scrollArea);
+    this.buildSupplyLinesSection(scrollArea);
 
     this.wrapper.appendChild(scrollArea);
     parent.appendChild(this.wrapper);
@@ -273,9 +272,9 @@ export class Sidebar {
         waterBonus: this.waterBonus.getValue(),
         plainsBonus: this.plainsBonus.getValue(),
       },
-      roads: {
+      supplyLines: {
         infrastructure: this.infrastructureSelect
-          .value as GenerationParams['roads']['infrastructure'],
+          .value as GenerationParams['supplyLines']['infrastructure'],
         plainsCost: this.plainsCost.getValue(),
         forestCost: this.forestCost.getValue(),
         hillsCost: this.hillsCost.getValue(),
@@ -283,9 +282,8 @@ export class Sidebar {
         riverCost: this.riverCost.getValue(),
         urbanCost: this.urbanCost.getValue(),
         cityConnectionDistance: this.cityConnectionDistance.getValue(),
-        railwayRedundancy: this.railwayRedundancy.getValue(),
-        roadReuseCost: this.roadReuseCost.getValue(),
-        railwayReuseCost: this.railwayReuseCost.getValue(),
+        redundancy: this.redundancy.getValue(),
+        reuseCost: this.reuseCost.getValue(),
       },
     };
   }
@@ -341,17 +339,16 @@ export class Sidebar {
     this.waterBonus.setValue(params.urban.waterBonus);
     this.plainsBonus.setValue(params.urban.plainsBonus);
 
-    this.infrastructureSelect.value = params.roads.infrastructure;
-    this.plainsCost.setValue(params.roads.plainsCost);
-    this.forestCost.setValue(params.roads.forestCost);
-    this.hillsCost.setValue(params.roads.hillsCost);
-    this.marshCost.setValue(params.roads.marshCost);
-    this.riverCost.setValue(params.roads.riverCost);
-    this.urbanCost.setValue(params.roads.urbanCost);
-    this.cityConnectionDistance.setValue(params.roads.cityConnectionDistance);
-    this.railwayRedundancy.setValue(params.roads.railwayRedundancy);
-    this.roadReuseCost.setValue(params.roads.roadReuseCost);
-    this.railwayReuseCost.setValue(params.roads.railwayReuseCost);
+    this.infrastructureSelect.value = params.supplyLines.infrastructure;
+    this.plainsCost.setValue(params.supplyLines.plainsCost);
+    this.forestCost.setValue(params.supplyLines.forestCost);
+    this.hillsCost.setValue(params.supplyLines.hillsCost);
+    this.marshCost.setValue(params.supplyLines.marshCost);
+    this.riverCost.setValue(params.supplyLines.riverCost);
+    this.urbanCost.setValue(params.supplyLines.urbanCost);
+    this.cityConnectionDistance.setValue(params.supplyLines.cityConnectionDistance);
+    this.redundancy.setValue(params.supplyLines.redundancy);
+    this.reuseCost.setValue(params.supplyLines.reuseCost);
 
     this.ignorePresetChange = false;
     this.detectPreset();
@@ -375,7 +372,7 @@ export class Sidebar {
     const layers: { key: LayerName; label: string }[] = [
       { key: 'terrain', label: 'Terrain' },
       { key: 'territory', label: 'Territory' },
-      { key: 'routes', label: 'Routes' },
+      { key: 'supplyLines', label: 'Supply Lines' },
       { key: 'flows', label: 'Flows' },
       { key: 'vehicles', label: 'Vehicles' },
       { key: 'supplyHubs', label: 'Supply Hubs' },
@@ -697,8 +694,8 @@ export class Sidebar {
     content.appendChild(this.plainsBonus.container);
   }
 
-  private buildRoadsSection(parent: HTMLElement): void {
-    const { content } = this.createSection('Roads', parent, false);
+  private buildSupplyLinesSection(parent: HTMLElement): void {
+    const { content } = this.createSection('Supply Lines', parent, false);
 
     const infraRow = this.createSelectRow(
       'Infrastructure',
@@ -723,12 +720,10 @@ export class Sidebar {
     content.appendChild(this.urbanCost.container);
     this.cityConnectionDistance = this.createSliderRow('City Connection Dist', 5, 50, 1, 20);
     content.appendChild(this.cityConnectionDistance.container);
-    this.railwayRedundancy = this.createSliderRow('Railway Redundancy', 0, 5, 1, 2);
-    content.appendChild(this.railwayRedundancy.container);
-    this.roadReuseCost = this.createSliderRow('Road Reuse Cost', 0, 1, 0.05, 0.1);
-    content.appendChild(this.roadReuseCost.container);
-    this.railwayReuseCost = this.createSliderRow('Railway Reuse Cost', 0, 1, 0.05, 0.1);
-    content.appendChild(this.railwayReuseCost.container);
+    this.redundancy = this.createSliderRow('Redundancy', 0, 5, 1, 2);
+    content.appendChild(this.redundancy.container);
+    this.reuseCost = this.createSliderRow('Reuse Cost', 0, 1, 0.05, 0.1);
+    content.appendChild(this.reuseCost.container);
   }
 
   // ---------------------------------------------------------------------------
