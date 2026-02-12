@@ -78,15 +78,15 @@ export interface Vehicle {
 // ============================================
 
 export enum RouteType {
-  Road = 'road',
-  Railway = 'railway',
+  SupplyLine = 'supplyLine',
   Sea = 'sea', // Post-MVP
   Air = 'air', // Post-MVP
 }
 
 export enum RouteStatus {
   Operational = 'operational',
-  Congested = 'congested',
+  Upgrading = 'upgrading',
+  Building = 'building',
   Damaged = 'damaged',
   Destroyed = 'destroyed',
 }
@@ -94,10 +94,11 @@ export enum RouteStatus {
 export interface Route {
   id: string;
   type: RouteType;
+  level: number; // 1-5
   fromFacilityId: string;
   toFacilityId: string;
   distance: number; // km
-  capacity: number; // max vehicles
+  capacity: number; // max throughput
   status: RouteStatus;
   assignedVehicles: string[];
 }
