@@ -1,5 +1,6 @@
 import './styles.css';
 import { findMarkerElements, renderMarkdown } from './markdownLoader';
+import { mountComponents } from './mountComponent';
 
 interface BiblePage {
   slug: string;
@@ -19,6 +20,7 @@ const nav = document.getElementById('bible-nav')!;
 const content = document.getElementById('bible-content')!;
 
 let activePage = 'index';
+let activeCleanups: Array<() => void> = [];
 
 function buildNav(): void {
   nav.innerHTML = '';
@@ -38,6 +40,11 @@ function buildNav(): void {
 }
 
 async function loadPage(slug: string): Promise<void> {
+  for (const cleanup of activeCleanups) {
+    cleanup();
+  }
+  activeCleanups = [];
+
   activePage = slug;
   buildNav();
 
@@ -52,9 +59,7 @@ async function loadPage(slug: string): Promise<void> {
   content.innerHTML = html;
 
   const components = findMarkerElements(content, markers);
-  for (const comp of components) {
-    comp.element.textContent = `[Preview: ${comp.type}]`;
-  }
+  activeCleanups = await mountComponents(components);
 }
 
 buildNav();
