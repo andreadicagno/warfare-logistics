@@ -34,6 +34,16 @@ const CANVAS_H = 120;
 const CANVAS_W_SINGLE = 140;
 const CANVAS_H_SINGLE = 120;
 
+function resetScene(scene: Container): Graphics {
+  const children = scene.removeChildren();
+  for (const child of children) {
+    child.destroy();
+  }
+  const g = new Graphics();
+  scene.addChild(g);
+  return g;
+}
+
 function drawFacilityIcon(g: Graphics, cx: number, cy: number, kind: FacilityKind): void {
   const inner = SIZE * 0.6;
 
@@ -144,20 +154,8 @@ function drawDamageOverlay(g: Graphics, cx: number, cy: number): void {
   g.stroke({ width: 2, color: DAMAGE_COLOR, alpha: 0.7 });
 }
 
-function redraw(
-  scene: Container,
-  g: Graphics,
-  damaged: boolean,
-  storage: Record<string, number>,
-): void {
-  g.clear();
-
-  // Remove old text children (keep graphics at index 0)
-  while (scene.children.length > 1) {
-    const child = scene.children[scene.children.length - 1];
-    child.destroy();
-    scene.removeChildAt(scene.children.length - 1);
-  }
+function redraw(scene: Container, damaged: boolean, storage: Record<string, number>): void {
+  const g = resetScene(scene);
 
   for (let i = 0; i < FACILITY_KINDS.length; i++) {
     const kind = FACILITY_KINDS[i];
@@ -194,18 +192,11 @@ function redraw(
 
 function redrawSingle(
   scene: Container,
-  g: Graphics,
   kind: FacilityKind,
   damaged: boolean,
   storage: Record<string, number>,
 ): void {
-  g.clear();
-
-  while (scene.children.length > 1) {
-    const child = scene.children[scene.children.length - 1];
-    child.destroy();
-    scene.removeChildAt(scene.children.length - 1);
-  }
+  const g = resetScene(scene);
 
   const cx = CANVAS_W_SINGLE / 2;
   const cy = 55;
@@ -264,16 +255,13 @@ const factory: ComponentFactory = async (container, props) => {
   const scene = new Container();
   app.stage.addChild(scene);
 
-  const g = new Graphics();
-  scene.addChild(g);
-
   let damaged = false;
   const storage: Record<string, number> = { fuel: 0.8, ammo: 0.6, food: 0.9, parts: 0.4 };
 
   if (isSingle) {
-    redrawSingle(scene, g, singleKind, damaged, storage);
+    redrawSingle(scene, singleKind, damaged, storage);
   } else {
-    redraw(scene, g, damaged, storage);
+    redraw(scene, damaged, storage);
   }
 
   // Controls
@@ -287,9 +275,9 @@ const factory: ComponentFactory = async (container, props) => {
   damageCheck.addEventListener('change', () => {
     damaged = damageCheck.checked;
     if (isSingle) {
-      redrawSingle(scene, g, singleKind, damaged, storage);
+      redrawSingle(scene, singleKind, damaged, storage);
     } else {
-      redraw(scene, g, damaged, storage);
+      redraw(scene, damaged, storage);
     }
   });
   damageLabel.appendChild(damageCheck);
@@ -308,9 +296,9 @@ const factory: ComponentFactory = async (container, props) => {
     slider.addEventListener('input', () => {
       storage[key] = Number(slider.value) / 100;
       if (isSingle) {
-        redrawSingle(scene, g, singleKind, damaged, storage);
+        redrawSingle(scene, singleKind, damaged, storage);
       } else {
-        redraw(scene, g, damaged, storage);
+        redraw(scene, damaged, storage);
       }
     });
     sliderLabel.appendChild(slider);

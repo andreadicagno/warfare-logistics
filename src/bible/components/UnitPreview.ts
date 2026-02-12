@@ -57,25 +57,25 @@ const CANVAS_H = 140;
 const CANVAS_W_SINGLE = 140;
 const CANVAS_H_SINGLE = 130;
 
-function clearScene(scene: Container, g: Graphics): void {
-  g.clear();
-  while (scene.children.length > 1) {
-    const child = scene.children[scene.children.length - 1];
+function resetScene(scene: Container): Graphics {
+  const children = scene.removeChildren();
+  for (const child of children) {
     child.destroy();
-    scene.removeChildAt(scene.children.length - 1);
   }
+  const g = new Graphics();
+  scene.addChild(g);
+  return g;
 }
 
 function drawUnit(
   scene: Container,
-  g: Graphics,
   unitType: UnitType,
   faction: Faction,
   echelon: Echelon,
   supplies: Record<string, number>,
   canvasWidth = CANVAS_W,
 ): void {
-  clearScene(scene, g);
+  const g = resetScene(scene);
 
   const cx = canvasWidth / 2;
   const cy = 50;
@@ -194,15 +194,12 @@ const factory: ComponentFactory = async (container, props) => {
   const scene = new Container();
   app.stage.addChild(scene);
 
-  const g = new Graphics();
-  scene.addChild(g);
-
   let unitType: UnitType = singleType ?? 'infantry';
   let faction: Faction = 'allied';
   let echelon: Echelon = 'battalion';
   const supplies: Record<string, number> = { fuel: 0.8, ammo: 0.6, food: 0.9, parts: 0.4 };
 
-  const redraw = () => drawUnit(scene, g, unitType, faction, echelon, supplies, canvasW);
+  const redraw = () => drawUnit(scene, unitType, faction, echelon, supplies, canvasW);
   redraw();
 
   // Controls
