@@ -1,7 +1,7 @@
 import { HexGrid } from '@core/map/HexGrid';
 import { mulberry32 } from '@core/map/rng';
-import type { GameMap, HexCoord, RoutePath } from '@core/map/types';
-import { TerrainType } from '@core/map/types';
+import type { GameMap, HexCoord, SupplyLineLevel } from '@core/map/types';
+import { SUPPLY_LINE_CAPACITY, TerrainType } from '@core/map/types';
 import type { ResourceStorage } from '@data/types';
 import type {
   Faction,
@@ -45,7 +45,7 @@ export class MockSimulation {
       units: [],
       formations: [],
       facilities: [],
-      routeStates: [],
+      supplyLineStates: [],
       vehicles: [],
       accessRamps: [],
       version: 1,
@@ -55,7 +55,7 @@ export class MockSimulation {
     this.generateFacilities();
     this.computeAccessRamps();
     this.placeUnits();
-    this.assignRouteHealth();
+    this.assignSupplyLineHealth();
     this.spawnVehicles();
   }
 
@@ -88,13 +88,10 @@ export class MockSimulation {
 
   private advanceVehicles(deltaSec: number): void {
     for (const vehicle of this.state.vehicles) {
-      const route =
-        vehicle.type === 'truck'
-          ? this.map.roads[vehicle.routeIndex]
-          : this.map.railways[vehicle.routeIndex];
-      if (!route) continue;
+      const line = this.map.supplyLines[vehicle.lineIndex];
+      if (!line) continue;
 
-      const estimatedLength = route.hexes.length * 24;
+      const estimatedLength = line.hexes.length * 24;
       const dt = (vehicle.speed * deltaSec) / estimatedLength;
       vehicle.t += dt * vehicle.direction;
 
@@ -775,18 +772,15 @@ export class MockSimulation {
     // Compute average front line q for distance calculation
     const frontAvgQ = this.computeFrontLineAvgQ();
 
-    // Build sets of coords that routes touch
+    // Build sets of coords that supply lines touch
     const routeHexKeys = new Set<string>();
-    for (const road of this.map.roads) {
-      for (const hex of road.hexes) {
+    const highLevelHexKeys = new Set<string>();
+    for (const line of this.map.supplyLines) {
+      for (const hex of line.hexes) {
         routeHexKeys.add(HexGrid.key(hex));
-      }
-    }
-    const railwayCoords = new Set<string>();
-    for (const rw of this.map.railways) {
-      for (const hex of rw.hexes) {
-        railwayCoords.add(HexGrid.key(hex));
-        routeHexKeys.add(HexGrid.key(hex));
+        if (line.level >= 4) {
+          highLevelHexKeys.add(HexGrid.key(hex));
+        }
       }
     }
 
@@ -813,10 +807,10 @@ export class MockSimulation {
       const hubKey = HexGrid.key(coord);
       const cell = this.map.cells.get(hubKey);
 
-      // Determine kind (check original hub coord for railway proximity)
+      // Determine kind (check original hub coord for high-level supply line proximity)
       const origKey = HexGrid.key(hub.coord);
       let kind: MockFacility['kind'] = 'depot';
-      if (railwayCoords.has(origKey)) {
+      if (highLevelHexKeys.has(origKey)) {
         kind = 'railHub';
       } else if (cell?.urbanClusterId) {
         kind = 'factory';
@@ -930,54 +924,28 @@ export class MockSimulation {
   // ---------------------------------------------------------------------------
 
   private computeAccessRamps(): void {
-    // Build maps of route hex keys for fast lookup
-    const roadHexes = new Map<string, HexCoord>();
-    for (const road of this.map.roads) {
-      for (const hex of road.hexes) {
-        roadHexes.set(HexGrid.key(hex), hex);
-      }
-    }
-    const railHexes = new Map<string, HexCoord>();
-    for (const rw of this.map.railways) {
-      for (const hex of rw.hexes) {
-        railHexes.set(HexGrid.key(hex), hex);
+    // Build map of supply line hex keys for fast lookup
+    const lineHexes = new Map<string, HexCoord>();
+    for (const line of this.map.supplyLines) {
+      for (const hex of line.hexes) {
+        lineHexes.set(HexGrid.key(hex), hex);
       }
     }
 
     for (const facility of this.state.facilities) {
       const fKey = HexGrid.key(facility.coord);
 
-      // Skip if already on a route
-      if (roadHexes.has(fKey) || railHexes.has(fKey)) continue;
-
-      // railHub prefers railway; depot/factory prefer road
-      const preferRailway = facility.kind === 'railHub';
-      const primarySet = preferRailway ? railHexes : roadHexes;
-      const fallbackSet = preferRailway ? roadHexes : railHexes;
-      const primaryType: 'road' | 'railway' = preferRailway ? 'railway' : 'road';
-      const fallbackType: 'road' | 'railway' = preferRailway ? 'road' : 'railway';
+      // Skip if already on a supply line
+      if (lineHexes.has(fKey)) continue;
 
       let bestCoord: HexCoord | null = null;
-      let bestType: 'road' | 'railway' = primaryType;
       let bestDist = Infinity;
 
-      for (const [, coord] of primarySet) {
+      for (const [, coord] of lineHexes) {
         const d = HexGrid.distance(facility.coord, coord);
         if (d <= 2 && d < bestDist) {
           bestDist = d;
           bestCoord = coord;
-          bestType = primaryType;
-        }
-      }
-
-      if (!bestCoord) {
-        for (const [, coord] of fallbackSet) {
-          const d = HexGrid.distance(facility.coord, coord);
-          if (d <= 2 && d < bestDist) {
-            bestDist = d;
-            bestCoord = coord;
-            bestType = fallbackType;
-          }
         }
       }
 
@@ -985,7 +953,6 @@ export class MockSimulation {
         this.state.accessRamps.push({
           facilityCoord: facility.coord,
           routeHexCoord: bestCoord,
-          routeType: bestType,
         });
       }
     }
@@ -995,23 +962,20 @@ export class MockSimulation {
   // Route health
   // ---------------------------------------------------------------------------
 
-  private assignRouteHealth(): void {
+  private assignSupplyLineHealth(): void {
     const frontAvgQ = this.computeFrontLineAvgQ();
-    const allRoutes: RoutePath[] = [...this.map.roads, ...this.map.railways];
+    const lines = this.map.supplyLines;
 
-    const routeInfos: Array<{ route: RoutePath; avgQ: number }> = [];
+    for (const line of lines) {
+      // Assign random levels for visual demo purposes
+      const randomLevel = this.randomInt(1, 5) as SupplyLineLevel;
+      line.level = randomLevel;
+      line.capacity = SUPPLY_LINE_CAPACITY[randomLevel - 1];
 
-    for (const route of allRoutes) {
       const avgQ =
-        route.hexes.length > 0
-          ? route.hexes.reduce((sum, h) => sum + h.q, 0) / route.hexes.length
-          : 0;
-      routeInfos.push({ route, avgQ });
-    }
+        line.hexes.length > 0 ? line.hexes.reduce((sum, h) => sum + h.q, 0) / line.hexes.length : 0;
 
-    // Determine health based on distance from front
-    for (const info of routeInfos) {
-      const dist = Math.abs(info.avgQ - frontAvgQ);
+      const dist = Math.abs(avgQ - frontAvgQ);
       let health: RouteHealth;
       if (dist > this.map.width * 0.3) {
         health = 'good';
@@ -1020,16 +984,16 @@ export class MockSimulation {
       } else {
         health = 'stressed';
       }
-      this.state.routeStates.push({ route: info.route, health });
+      this.state.supplyLineStates.push({ supplyLine: line, health });
     }
 
-    // Pick 1-2 routes and mark destroyed (keep at least one active)
-    if (this.state.routeStates.length > 1) {
-      const destroyCount = Math.min(this.randomInt(1, 2), this.state.routeStates.length - 1);
-      const indices = Array.from({ length: this.state.routeStates.length }, (_, i) => i);
+    // Pick 1-2 lines and mark destroyed (keep at least one active)
+    if (this.state.supplyLineStates.length > 1) {
+      const destroyCount = Math.min(this.randomInt(1, 2), this.state.supplyLineStates.length - 1);
+      const indices = Array.from({ length: this.state.supplyLineStates.length }, (_, i) => i);
       this.shuffle(indices);
       for (let i = 0; i < destroyCount; i++) {
-        this.state.routeStates[indices[i]].health = 'destroyed';
+        this.state.supplyLineStates[indices[i]].health = 'destroyed';
       }
     }
   }
@@ -1041,27 +1005,19 @@ export class MockSimulation {
   private spawnVehicles(): void {
     let vehicleIndex = 1;
 
-    for (let i = 0; i < this.state.routeStates.length; i++) {
-      const rs = this.state.routeStates[i];
-      if (rs.health === 'destroyed') continue;
+    for (const ss of this.state.supplyLineStates) {
+      if (ss.health === 'destroyed') continue;
 
       const vehicleCount = this.randomInt(2, 4);
-      const vehicleType = rs.route.type === 'railway' ? 'train' : 'truck';
+      const vehicleType = ss.supplyLine.level >= 4 ? 'train' : 'truck';
       const speed = vehicleType === 'truck' ? 40 : 25;
-
-      // Determine the route index within roads or railways
-      let routeIndex: number;
-      if (rs.route.type === 'road') {
-        routeIndex = this.map.roads.indexOf(rs.route);
-      } else {
-        routeIndex = this.map.railways.indexOf(rs.route);
-      }
+      const lineIndex = this.map.supplyLines.indexOf(ss.supplyLine);
 
       for (let v = 0; v < vehicleCount; v++) {
         this.state.vehicles.push({
           id: `vehicle-${vehicleIndex}`,
           type: vehicleType,
-          routeIndex,
+          lineIndex,
           t: this.rng(),
           speed,
           direction: this.rng() < 0.5 ? 1 : -1,

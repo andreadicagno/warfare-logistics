@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { HexGrid } from '../HexGrid';
 import { RiverGenerator } from '../RiverGenerator';
-import { SupplyLineGenerator } from '../SupplyLineGenerator';
 import { SmoothingPass } from '../SmoothingPass';
+import { SupplyLineGenerator } from '../SupplyLineGenerator';
 import { TerrainGenerator } from '../TerrainGenerator';
 import type { HexCell, SupplyLineParams, UrbanCluster } from '../types';
 import { DEFAULT_GENERATION_PARAMS, TerrainType } from '../types';

@@ -1,6 +1,13 @@
 import { Profiler } from '../Profiler';
 import { HexGrid } from './HexGrid';
-import type { HexCell, HexCoord, SupplyLine, SupplyLineLevel, SupplyLineParams, UrbanCluster } from './types';
+import type {
+  HexCell,
+  HexCoord,
+  SupplyLine,
+  SupplyLineLevel,
+  SupplyLineParams,
+  UrbanCluster,
+} from './types';
 import { SUPPLY_LINE_CAPACITY, TerrainType } from './types';
 
 // ---------------------------------------------------------------------------

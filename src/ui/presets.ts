@@ -36,7 +36,7 @@ export const BUILT_IN_PRESETS: Record<string, GenerationParams> = {
   },
   Peninsula: {
     ...DEFAULT_GENERATION_PARAMS,
-    roads: { ...DEFAULT_GENERATION_PARAMS.roads, infrastructure: 'basic' },
+    supplyLines: { ...DEFAULT_GENERATION_PARAMS.supplyLines, infrastructure: 'basic' },
     seaSides: { north: true, south: true, east: true, west: false },
   },
   'Mountain Fortress': {

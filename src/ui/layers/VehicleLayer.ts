@@ -62,17 +62,15 @@ export class VehicleLayer {
   readonly container = new Container();
   private graphics = new Graphics();
   private getZoom: () => number;
-  private roadSplines: BezierSegment[][] = [];
-  private railwaySplines: BezierSegment[][] = [];
+  private splines: BezierSegment[][] = [];
 
   constructor(getZoom: () => number) {
     this.getZoom = getZoom;
     this.container.addChild(this.graphics);
   }
 
-  init(roadSplines: BezierSegment[][], railwaySplines: BezierSegment[][]): void {
-    this.roadSplines = roadSplines;
-    this.railwaySplines = railwaySplines;
+  init(splines: BezierSegment[][]): void {
+    this.splines = splines;
   }
 
   update(_ticker: Ticker, vehicles: MockVehicle[]): void {
@@ -83,17 +81,14 @@ export class VehicleLayer {
     }
 
     for (const vehicle of vehicles) {
-      const splines =
-        vehicle.type === 'truck'
-          ? this.roadSplines[vehicle.routeIndex]
-          : this.railwaySplines[vehicle.routeIndex];
+      const spline = this.splines[vehicle.lineIndex];
 
-      if (!splines || splines.length === 0) continue;
+      if (!spline || spline.length === 0) continue;
 
       if (vehicle.type === 'truck') {
-        this.drawTruck(splines, vehicle.t, vehicle.direction);
+        this.drawTruck(spline, vehicle.t, vehicle.direction);
       } else {
-        this.drawTrain(splines, vehicle.t, vehicle.direction);
+        this.drawTrain(spline, vehicle.t, vehicle.direction);
       }
     }
   }

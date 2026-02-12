@@ -8,10 +8,10 @@ import { Camera } from './Camera';
 import { HexRenderer } from './HexRenderer';
 import { FlowLayer } from './layers/FlowLayer';
 import { FrontLineLayer } from './layers/FrontLineLayer';
-import { RouteLayer } from './layers/RouteLayer';
 import { SelectionLayer } from './layers/SelectionLayer';
 import { SupplyFlowLayer } from './layers/SupplyFlowLayer';
 import { SupplyHubLayer } from './layers/SupplyHubLayer';
+import { SupplyLineLayer } from './layers/SupplyLineLayer';
 import { TerrainLayer } from './layers/TerrainLayer';
 import { TerritoryLayer } from './layers/TerritoryLayer';
 import { UnitLayer } from './layers/UnitLayer';
@@ -20,7 +20,7 @@ import { VehicleLayer } from './layers/VehicleLayer';
 export type LayerName =
   | 'terrain'
   | 'territory'
-  | 'routes'
+  | 'supplyLines'
   | 'flows'
   | 'vehicles'
   | 'supplyHubs'
@@ -36,7 +36,7 @@ export class MapRenderer {
   private camera: Camera;
   private terrainLayer: TerrainLayer;
   private territoryLayer: TerritoryLayer;
-  private routeLayer: RouteLayer;
+  private supplyLineLayer: SupplyLineLayer;
   private flowLayer: FlowLayer;
   private vehicleLayer: VehicleLayer;
   private supplyHubLayer: SupplyHubLayer;
@@ -64,18 +64,11 @@ export class MapRenderer {
     // Create MockSimulation
     this.mockSim = new MockSimulation(gameMap);
 
-    // Build route health maps from mock state
-    const roadHealths = new Map<number, RouteHealth>();
-    const railwayHealths = new Map<number, RouteHealth>();
-    for (let i = 0; i < this.mockSim.state.routeStates.length; i++) {
-      const rs = this.mockSim.state.routeStates[i];
-      if (rs.route.type === 'road') {
-        const idx = gameMap.roads.indexOf(rs.route);
-        if (idx >= 0) roadHealths.set(idx, rs.health);
-      } else {
-        const idx = gameMap.railways.indexOf(rs.route);
-        if (idx >= 0) railwayHealths.set(idx, rs.health);
-      }
+    // Build supply line health map from mock state
+    const healths = new Map<number, RouteHealth>();
+    for (const ss of this.mockSim.state.supplyLineStates) {
+      const idx = gameMap.supplyLines.indexOf(ss.supplyLine);
+      if (idx >= 0) healths.set(idx, ss.health);
     }
 
     // Create layers
@@ -85,12 +78,7 @@ export class MapRenderer {
       this.mockSim.state.territory,
       this.mockSim.state.frontLineEdges,
     );
-    this.routeLayer = new RouteLayer(
-      gameMap,
-      roadHealths,
-      railwayHealths,
-      this.mockSim.state.accessRamps,
-    );
+    this.supplyLineLayer = new SupplyLineLayer(gameMap, healths, this.mockSim.state.accessRamps);
     this.flowLayer = new FlowLayer(() => this.camera.scale);
     this.vehicleLayer = new VehicleLayer(() => this.camera.scale);
     this.supplyHubLayer = new SupplyHubLayer(this.mockSim.state.facilities);
@@ -102,7 +90,7 @@ export class MapRenderer {
     // Add to scene graph in correct rendering order
     this.worldContainer.addChild(this.terrainLayer.container);
     this.worldContainer.addChild(this.territoryLayer.container);
-    this.worldContainer.addChild(this.routeLayer.container);
+    this.worldContainer.addChild(this.supplyLineLayer.container);
     this.worldContainer.addChild(this.flowLayer.container);
     this.worldContainer.addChild(this.vehicleLayer.container);
     this.worldContainer.addChild(this.supplyHubLayer.container);
@@ -113,7 +101,7 @@ export class MapRenderer {
 
     const bounds = this.camera.getVisibleBounds();
     prof.measure('TerrainLayer.build()', () => this.terrainLayer.build(bounds));
-    prof.measure('RouteLayer.build()', () => this.routeLayer.build(0));
+    prof.measure('SupplyLineLayer.build()', () => this.supplyLineLayer.build(0));
 
     // Initialize data and build versioned layers
     this.territoryLayer.build(this.mockSim.state.version);
@@ -139,24 +127,16 @@ export class MapRenderer {
 
     const newBounds = this.camera.getVisibleBounds();
     this.terrainLayer.build(newBounds);
-    this.routeLayer.build(0);
+    this.supplyLineLayer.build(0);
     this.supplyHubLayer.build(this.lastMockVersion);
 
-    // Initialize FlowLayer (replaces RouteAnimator)
+    // Initialize FlowLayer
     prof.measure('FlowLayer.init()', () => {
-      this.flowLayer.init(
-        this.routeLayer.computedRoadSplines,
-        this.routeLayer.computedRailwaySplines,
-        roadHealths,
-        railwayHealths,
-      );
+      this.flowLayer.init(this.supplyLineLayer.computedSplines, healths);
     });
 
     // Initialize VehicleLayer
-    this.vehicleLayer.init(
-      this.routeLayer.computedRoadSplines,
-      this.routeLayer.computedRailwaySplines,
-    );
+    this.vehicleLayer.init(this.supplyLineLayer.computedSplines);
 
     this.camera.attach();
 
@@ -229,8 +209,8 @@ export class MapRenderer {
         return this.terrainLayer.container;
       case 'territory':
         return this.territoryLayer.container;
-      case 'routes':
-        return this.routeLayer.container;
+      case 'supplyLines':
+        return this.supplyLineLayer.container;
       case 'flows':
         return this.flowLayer.container;
       case 'vehicles':
@@ -256,8 +236,8 @@ export class MapRenderer {
       case 'territory':
         this.territoryLayer.build(this.lastMockVersion);
         break;
-      case 'routes':
-        this.routeLayer.build(this.lastMockVersion);
+      case 'supplyLines':
+        this.supplyLineLayer.build(this.lastMockVersion);
         break;
       case 'supplyHubs':
         this.supplyHubLayer.build(this.lastMockVersion);
@@ -281,7 +261,7 @@ export class MapRenderer {
     this.camera.detach();
     this.terrainLayer.destroy();
     this.territoryLayer.destroy();
-    this.routeLayer.destroy();
+    this.supplyLineLayer.destroy();
     this.flowLayer.destroy();
     this.vehicleLayer.destroy();
     this.supplyHubLayer.destroy();

@@ -1,8 +1,8 @@
 import { Profiler } from '../Profiler';
 import { RiverGenerator } from './RiverGenerator';
-import { RoadGenerator } from './RoadGenerator';
 import { SmoothingPass } from './SmoothingPass';
 import { SupplyHubPlacer } from './SupplyHubPlacer';
+import { SupplyLineGenerator } from './SupplyLineGenerator';
 import { TerrainGenerator } from './TerrainGenerator';
 import type { GameMap, GenerationParams } from './types';
 import { UrbanGenerator } from './UrbanGenerator';
@@ -43,13 +43,13 @@ export class MapGenerator {
       SupplyHubPlacer.place(cells, width, height, urbanClusters, params.seed),
     );
 
-    // Phase 7: Roads & railways
-    const { roads, railways } = prof.measure('Road & railway generation', () =>
-      RoadGenerator.generate(cells, width, height, params.roads, urbanClusters),
+    // Phase 7: Supply lines
+    const supplyLines = prof.measure('Supply line generation', () =>
+      SupplyLineGenerator.generate(cells, width, height, params.supplyLines, urbanClusters),
     );
 
     prof.log();
 
-    return { width, height, seed: params.seed, cells, urbanClusters, supplyHubs, roads, railways };
+    return { width, height, seed: params.seed, cells, urbanClusters, supplyHubs, supplyLines };
   }
 }

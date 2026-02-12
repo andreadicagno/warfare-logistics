@@ -128,10 +128,7 @@ export class FlowLayer {
     this.container.addChild(this.graphics);
   }
 
-  init(
-    splines: BezierSegment[][],
-    healths: Map<number, RouteHealth>,
-  ): void {
+  init(splines: BezierSegment[][], healths: Map<number, RouteHealth>): void {
     this.splines = splines;
     this.particles = createFlowParticles(splines, healths);
   }

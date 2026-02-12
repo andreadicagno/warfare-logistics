@@ -9,7 +9,7 @@ describe('MapGenerator', () => {
     width: 40,
     height: 30,
     seed: 42,
-    roads: { ...DEFAULT_GENERATION_PARAMS.roads, infrastructure: 'basic' },
+    supplyLines: { ...DEFAULT_GENERATION_PARAMS.supplyLines, infrastructure: 'basic' },
   };
 
   describe('MAP_SIZE_PRESETS', () => {
@@ -44,14 +44,9 @@ describe('MapGenerator', () => {
       expect(riverCells.length).toBeGreaterThan(0);
     });
 
-    it('produces roads', () => {
+    it('produces supply lines', () => {
       const map = MapGenerator.generate(params);
-      expect(map.roads.length).toBeGreaterThan(0);
-    });
-
-    it('produces railways with basic infrastructure', () => {
-      const map = MapGenerator.generate(params);
-      expect(map.railways.length).toBeGreaterThanOrEqual(1);
+      expect(map.supplyLines.length).toBeGreaterThan(0);
     });
 
     it('has urban clusters placed', () => {
@@ -74,7 +69,7 @@ describe('MapGenerator', () => {
       const a = MapGenerator.generate(params);
       const b = MapGenerator.generate(params);
       expect(a.cells.size).toBe(b.cells.size);
-      expect(a.roads.length).toBe(b.roads.length);
+      expect(a.supplyLines.length).toBe(b.supplyLines.length);
       expect(a.urbanClusters.length).toBe(b.urbanClusters.length);
       expect(a.supplyHubs.length).toBe(b.supplyHubs.length);
       for (const [key, cellA] of a.cells) {

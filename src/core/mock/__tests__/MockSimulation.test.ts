@@ -31,24 +31,30 @@ function createMiniMap(): GameMap {
       { coord: { q: 7, r: 2 }, size: 'large' },
       { coord: { q: 1, r: 5 }, size: 'small' },
     ],
-    roads: [
+    supplyLines: [
       {
         hexes: [
           { q: 2, r: 2 },
           { q: 3, r: 2 },
           { q: 4, r: 2 },
         ],
-        type: 'road' as const,
+        level: 1 as const,
+        state: 'active' as const,
+        buildProgress: 1,
+        flow: 0,
+        capacity: 10,
       },
-    ],
-    railways: [
       {
         hexes: [
           { q: 2, r: 2 },
           { q: 3, r: 1 },
           { q: 4, r: 1 },
         ],
-        type: 'railway' as const,
+        level: 4 as const,
+        state: 'active' as const,
+        buildProgress: 1,
+        flow: 0,
+        capacity: 150,
       },
     ],
   };
@@ -91,9 +97,9 @@ describe('MockSimulation', () => {
       expect(sim.state.facilities.length).toBe(3);
     });
 
-    it('assigns route health to all routes', () => {
+    it('assigns health to all supply lines', () => {
       const sim = new MockSimulation(createMiniMap());
-      expect(sim.state.routeStates.length).toBe(2);
+      expect(sim.state.supplyLineStates.length).toBe(2);
     });
 
     it('creates vehicles on active routes', () => {

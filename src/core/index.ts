@@ -10,6 +10,8 @@ export type {
   HexCell,
   HexCoord,
   SupplyHub,
+  SupplyLine,
+  SupplyLineLevel,
   UrbanCluster,
 } from './map/types';
 export { TerrainType } from './map/types';

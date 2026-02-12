@@ -65,7 +65,10 @@ describe('SupplyLine types', () => {
 
   it('SupplyLine interface supports required fields', () => {
     const line: SupplyLine = {
-      hexes: [{ q: 0, r: 0 }, { q: 1, r: 0 }],
+      hexes: [
+        { q: 0, r: 0 },
+        { q: 1, r: 0 },
+      ],
       level: 1,
       state: 'active',
       buildProgress: 1,
