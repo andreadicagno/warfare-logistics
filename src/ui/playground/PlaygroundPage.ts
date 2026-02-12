@@ -12,6 +12,7 @@ import { SelectionLayer } from '../layers/SelectionLayer';
 import { TerrainLayer } from '../layers/TerrainLayer';
 import { BuildController } from './BuildController';
 import { BuildToolbar } from './BuildToolbar';
+import { InfoPanel } from './InfoPanel';
 import { PlaygroundFacilityLayer } from './PlaygroundFacilityLayer';
 import { PlaygroundSupplyLineLayer } from './PlaygroundSupplyLineLayer';
 import { ShipmentLayer } from './ShipmentLayer';
@@ -32,6 +33,7 @@ export class PlaygroundPage {
   private facilityLayer!: PlaygroundFacilityLayer;
   private supplyLineLayer!: PlaygroundSupplyLineLayer;
   private shipmentLayer!: ShipmentLayer;
+  private infoPanel!: InfoPanel;
   private boundOnFrame!: () => void;
   private toolbar!: BuildToolbar;
   private _currentTool: BuildTool = 'select';
@@ -74,9 +76,14 @@ export class PlaygroundPage {
     // Create simulation
     this._simulation = new Simulation(this.gameMap);
 
-    // Build controller
+    // Build controller (wired to info panel below)
     this.buildController = new BuildController(this._simulation, this.gameMap, (entity) => {
       this._selectedEntity = entity;
+      if (entity) {
+        this.infoPanel?.show(entity);
+      } else {
+        this.infoPanel?.hide();
+      }
     });
 
     // Scene graph
@@ -122,7 +129,7 @@ export class PlaygroundPage {
     // Attach camera controls
     this.camera.attach();
 
-    // HTML overlays (toolbar + time controls)
+    // HTML overlays (toolbar + time controls + info panel)
     const htmlContainer = this.app.canvas.parentElement;
     if (htmlContainer) {
       this.toolbar = new BuildToolbar(htmlContainer, (tool) => {
@@ -142,6 +149,21 @@ export class PlaygroundPage {
         },
         (speed) => {
           this.tickSpeed = speed;
+        },
+      );
+
+      this.infoPanel = new InfoPanel(
+        htmlContainer,
+        (id) => {
+          this._simulation.upgrade(id);
+          const entity =
+            this._simulation.state.factories.get(id) ?? this._simulation.state.depots.get(id);
+          if (entity) this.infoPanel.show(entity);
+        },
+        (id) => {
+          this._simulation.demolish(id);
+          this.infoPanel.hide();
+          this._selectedEntity = null;
         },
       );
     }
@@ -197,6 +219,17 @@ export class PlaygroundPage {
     this.supplyLineLayer.build(simState);
     this.shipmentLayer.update(simState.shipments);
 
+    // Refresh info panel for selected entity
+    if (this._selectedEntity) {
+      const updated =
+        this._simulation.state.factories.get(this._selectedEntity.id) ??
+        this._simulation.state.depots.get(this._selectedEntity.id);
+      this.infoPanel?.update(updated ?? null);
+      if (!updated) {
+        this._selectedEntity = null;
+      }
+    }
+
     this.timeControls?.updateTick(this._simulation.state.tick);
   }
 
@@ -206,6 +239,7 @@ export class PlaygroundPage {
     this.app.stage.off('pointermove', this.onPointerMove);
     this.toolbar?.destroy();
     this.timeControls?.destroy();
+    this.infoPanel?.destroy();
     this.camera.detach();
     this.terrainLayer.destroy();
     this.selectionLayer.destroy();
