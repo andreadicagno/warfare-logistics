@@ -37,10 +37,21 @@ export interface HexCell {
   urbanClusterId: string | null;
 }
 
-export interface RoutePath {
+export type SupplyLineLevel = 1 | 2 | 3 | 4 | 5;
+export type SupplyLineState = 'active' | 'upgrading' | 'building';
+
+export interface SupplyLine {
   hexes: HexCoord[];
-  type: 'road' | 'railway';
+  level: SupplyLineLevel;
+  state: SupplyLineState;
+  buildProgress: number; // 0-1
+  flow: number;
+  capacity: number;
 }
+
+export const SUPPLY_LINE_CAPACITY: readonly [number, number, number, number, number] = [
+  10, 25, 60, 150, 400,
+];
 
 export interface GameMap {
   width: number;
@@ -49,8 +60,7 @@ export interface GameMap {
   cells: Map<string, HexCell>;
   urbanClusters: UrbanCluster[];
   supplyHubs: SupplyHub[];
-  roads: RoutePath[];
-  railways: RoutePath[];
+  supplyLines: SupplyLine[];
 }
 
 export interface SeaSides {
@@ -106,7 +116,7 @@ export interface UrbanParams {
   plainsBonus: number;
 }
 
-export interface RoadParams {
+export interface SupplyLineParams {
   infrastructure: 'none' | 'basic' | 'developed';
   plainsCost: number;
   forestCost: number;
@@ -115,9 +125,8 @@ export interface RoadParams {
   riverCost: number;
   urbanCost: number;
   cityConnectionDistance: number;
-  railwayRedundancy: number;
-  roadReuseCost: number;
-  railwayReuseCost: number;
+  redundancy: number; // extra edges beyond MST (was railwayRedundancy)
+  reuseCost: number; // cost multiplier for reusing existing edges (was roadReuseCost/railwayReuseCost)
 }
 
 export interface GenerationParams {
@@ -129,7 +138,7 @@ export interface GenerationParams {
   smoothing: SmoothingParams;
   rivers: RiverParams;
   urban: UrbanParams;
-  roads: RoadParams;
+  supplyLines: SupplyLineParams;
 }
 
 export const DEFAULT_GENERATION_PARAMS: GenerationParams = {
@@ -179,7 +188,7 @@ export const DEFAULT_GENERATION_PARAMS: GenerationParams = {
     waterBonus: 2,
     plainsBonus: 1,
   },
-  roads: {
+  supplyLines: {
     infrastructure: 'developed',
     plainsCost: 1,
     forestCost: 2,
@@ -188,8 +197,7 @@ export const DEFAULT_GENERATION_PARAMS: GenerationParams = {
     riverCost: 6,
     urbanCost: 1,
     cityConnectionDistance: 20,
-    railwayRedundancy: 2,
-    roadReuseCost: 0.1,
-    railwayReuseCost: 0.1,
+    redundancy: 2,
+    reuseCost: 0.1,
   },
 };
