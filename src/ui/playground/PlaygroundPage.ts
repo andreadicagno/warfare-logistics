@@ -1,14 +1,16 @@
+import { HexGrid } from '@core/map/HexGrid';
 import { MapGenerator } from '@core/map/MapGenerator';
 import type { GameMap, HexCoord } from '@core/map/types';
 import { DEFAULT_GENERATION_PARAMS } from '@core/map/types';
 import { Simulation } from '@core/simulation/Simulation';
-import type { BuildTool } from '@core/simulation/types';
+import type { BuildTool, FacilityEntity } from '@core/simulation/types';
 import type { Application } from 'pixi.js';
 import { Container } from 'pixi.js';
 import { Camera } from '../Camera';
 import { HexRenderer } from '../HexRenderer';
 import { SelectionLayer } from '../layers/SelectionLayer';
 import { TerrainLayer } from '../layers/TerrainLayer';
+import { BuildController } from './BuildController';
 import { BuildToolbar } from './BuildToolbar';
 import type { TimeSpeed } from './TimeControls';
 import { TimeControls } from './TimeControls';
@@ -31,6 +33,8 @@ export class PlaygroundPage {
   private isPlaying = false;
   private tickSpeed: TimeSpeed = 1;
   private tickAccumulator = 0;
+  private buildController!: BuildController;
+  private _selectedEntity: FacilityEntity | null = null;
 
   constructor(app: Application) {
     this.app = app;
@@ -46,6 +50,11 @@ export class PlaygroundPage {
     return this._currentTool;
   }
 
+  /** The currently selected facility, if any. */
+  get selectedEntity(): FacilityEntity | null {
+    return this._selectedEntity;
+  }
+
   async init(): Promise<void> {
     // Generate a small, fixed-seed map
     const params = {
@@ -58,6 +67,11 @@ export class PlaygroundPage {
 
     // Create simulation
     this._simulation = new Simulation(this.gameMap);
+
+    // Build controller
+    this.buildController = new BuildController(this._simulation, this.gameMap, (entity) => {
+      this._selectedEntity = entity;
+    });
 
     // Scene graph
     this.worldContainer = new Container();
@@ -114,6 +128,9 @@ export class PlaygroundPage {
       );
     }
 
+    // Click handler for building
+    this.app.stage.on('pointerdown', this.onPointerDown);
+
     // Pointer tracking for hex hover
     this.app.stage.on('pointermove', this.onPointerMove);
 
@@ -125,6 +142,13 @@ export class PlaygroundPage {
   get hoveredHex(): HexCoord | null {
     return this.selectionLayer.hoveredHex;
   }
+
+  private onPointerDown = (e: { global: { x: number; y: number } }): void => {
+    const world = this.camera.screenToWorld(e.global.x, e.global.y);
+    const hex = HexRenderer.pixelToHex(world.x, world.y);
+    if (!HexGrid.inBounds(hex, this.gameMap.width, this.gameMap.height)) return;
+    this.buildController.handleClick(hex, this._currentTool);
+  };
 
   private onPointerMove = (e: { global: { x: number; y: number } }): void => {
     const world = this.camera.screenToWorld(e.global.x, e.global.y);
@@ -154,6 +178,7 @@ export class PlaygroundPage {
 
   destroy(): void {
     this.app.ticker.remove(this.boundOnFrame);
+    this.app.stage.off('pointerdown', this.onPointerDown);
     this.app.stage.off('pointermove', this.onPointerMove);
     this.toolbar?.destroy();
     this.timeControls?.destroy();
