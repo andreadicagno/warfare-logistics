@@ -1,5 +1,5 @@
 import type { FacilityEntity, PlacedDepot, PlacedFactory } from '@core/simulation/types';
-import { RESOURCE_COLORS, isFactory } from '@core/simulation/types';
+import { isFactory, RESOURCE_COLORS } from '@core/simulation/types';
 import { ResourceType } from '@data/types';
 
 export class InfoPanel {
@@ -62,9 +62,7 @@ export class InfoPanel {
     const typeName = this.factoryTypeName(factory.resourceType);
     const colorHex = `#${RESOURCE_COLORS[factory.resourceType].toString(16).padStart(6, '0')}`;
     const fillPct =
-      factory.bufferCapacity > 0
-        ? Math.round((factory.buffer / factory.bufferCapacity) * 100)
-        : 0;
+      factory.bufferCapacity > 0 ? Math.round((factory.buffer / factory.bufferCapacity) * 100) : 0;
     const canUpgrade = factory.level < 5;
 
     this.contentEl.innerHTML = `
@@ -88,12 +86,7 @@ export class InfoPanel {
   }
 
   private renderDepot(depot: PlacedDepot): void {
-    const resources = [
-      ResourceType.Fuel,
-      ResourceType.Ammo,
-      ResourceType.Food,
-      ResourceType.Parts,
-    ];
+    const resources = [ResourceType.Fuel, ResourceType.Ammo, ResourceType.Food, ResourceType.Parts];
     const canUpgrade = depot.level < 5;
 
     const barsHtml = resources

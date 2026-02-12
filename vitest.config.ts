@@ -30,6 +30,7 @@ export default mergeConfig(
           'src/ui/Camera.ts',
           'src/bible/main.ts',
           'src/bible/components/**',
+          'src/ui/playground/**',
         ],
         thresholds: {
           lines: 70,
