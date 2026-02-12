@@ -3,6 +3,7 @@ import './components/TerrainPreview';
 import './components/SupplyLinePreview';
 import './components/FacilityPreview';
 import './components/UnitPreview';
+import './components/ResourcePreview';
 import { findMarkerElements, renderMarkdown } from './markdownLoader';
 import { mountComponents } from './mountComponent';
 
@@ -37,6 +38,11 @@ const pages: BiblePage[] = [
     slug: 'units',
     title: 'Units',
     load: () => import('../../docs/bible/units.md?raw').then((m) => m.default),
+  },
+  {
+    slug: 'resources',
+    title: 'Resources',
+    load: () => import('../../docs/bible/resources.md?raw').then((m) => m.default),
   },
 ];
 
