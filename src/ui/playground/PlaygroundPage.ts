@@ -12,6 +12,8 @@ import { SelectionLayer } from '../layers/SelectionLayer';
 import { TerrainLayer } from '../layers/TerrainLayer';
 import { BuildController } from './BuildController';
 import { BuildToolbar } from './BuildToolbar';
+import { PlaygroundFacilityLayer } from './PlaygroundFacilityLayer';
+import { PlaygroundSupplyLineLayer } from './PlaygroundSupplyLineLayer';
 import type { TimeSpeed } from './TimeControls';
 import { TimeControls } from './TimeControls';
 
@@ -26,6 +28,8 @@ export class PlaygroundPage {
   private camera!: Camera;
   private terrainLayer!: TerrainLayer;
   private selectionLayer!: SelectionLayer;
+  private facilityLayer!: PlaygroundFacilityLayer;
+  private supplyLineLayer!: PlaygroundSupplyLineLayer;
   private boundOnFrame!: () => void;
   private toolbar!: BuildToolbar;
   private _currentTool: BuildTool = 'select';
@@ -84,7 +88,15 @@ export class PlaygroundPage {
     this.terrainLayer = new TerrainLayer(this.gameMap);
     this.worldContainer.addChild(this.terrainLayer.container);
 
-    // Selection layer
+    // Supply line layer (below facilities)
+    this.supplyLineLayer = new PlaygroundSupplyLineLayer();
+    this.worldContainer.addChild(this.supplyLineLayer.container);
+
+    // Facility layer
+    this.facilityLayer = new PlaygroundFacilityLayer();
+    this.worldContainer.addChild(this.facilityLayer.container);
+
+    // Selection layer (on top)
     this.selectionLayer = new SelectionLayer();
     this.worldContainer.addChild(this.selectionLayer.container);
 
@@ -173,6 +185,11 @@ export class PlaygroundPage {
       }
     }
 
+    // Rebuild render layers when simulation state changes
+    const simState = this._simulation.state;
+    this.facilityLayer.build(simState);
+    this.supplyLineLayer.build(simState);
+
     this.timeControls?.updateTick(this._simulation.state.tick);
   }
 
@@ -185,6 +202,8 @@ export class PlaygroundPage {
     this.camera.detach();
     this.terrainLayer.destroy();
     this.selectionLayer.destroy();
+    this.facilityLayer.destroy();
+    this.supplyLineLayer.destroy();
     this.app.stage.removeChild(this.worldContainer);
     this.worldContainer.destroy();
   }
