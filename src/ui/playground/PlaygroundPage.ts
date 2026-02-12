@@ -13,6 +13,7 @@ import { TerrainLayer } from '../layers/TerrainLayer';
 import { BuildController } from './BuildController';
 import { BuildToolbar } from './BuildToolbar';
 import { InfoPanel } from './InfoPanel';
+import { PlacementOverlay } from './PlacementOverlay';
 import { PlaygroundFacilityLayer } from './PlaygroundFacilityLayer';
 import { PlaygroundSupplyLineLayer } from './PlaygroundSupplyLineLayer';
 import { ShipmentLayer } from './ShipmentLayer';
@@ -33,6 +34,7 @@ export class PlaygroundPage {
   private facilityLayer!: PlaygroundFacilityLayer;
   private supplyLineLayer!: PlaygroundSupplyLineLayer;
   private shipmentLayer!: ShipmentLayer;
+  private placementOverlay!: PlacementOverlay;
   private infoPanel!: InfoPanel;
   private boundOnFrame!: () => void;
   private toolbar!: BuildToolbar;
@@ -109,9 +111,13 @@ export class PlaygroundPage {
     this.facilityLayer = new PlaygroundFacilityLayer();
     this.worldContainer.addChild(this.facilityLayer.container);
 
-    // Selection layer (on top)
+    // Selection layer (on top of game elements)
     this.selectionLayer = new SelectionLayer();
     this.worldContainer.addChild(this.selectionLayer.container);
+
+    // Placement overlay (green/red validation on top of everything)
+    this.placementOverlay = new PlacementOverlay();
+    this.worldContainer.addChild(this.placementOverlay.container);
 
     // Initial build
     const bounds = this.camera.getVisibleBounds();
@@ -194,6 +200,9 @@ export class PlaygroundPage {
     const world = this.camera.screenToWorld(e.global.x, e.global.y);
     const hex = HexRenderer.pixelToHex(world.x, world.y);
     this.selectionLayer.setHover(hex);
+
+    const isPlacementTool = this._currentTool !== 'select' && this._currentTool !== 'demolish';
+    this.placementOverlay.update(hex, this.gameMap, this._simulation.state, isPlacementTool);
   };
 
   private onFrame(): void {
@@ -246,6 +255,7 @@ export class PlaygroundPage {
     this.facilityLayer.destroy();
     this.supplyLineLayer.destroy();
     this.shipmentLayer.destroy();
+    this.placementOverlay.destroy();
     this.app.stage.removeChild(this.worldContainer);
     this.worldContainer.destroy();
   }
