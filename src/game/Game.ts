@@ -11,9 +11,13 @@ import type { Application } from 'pixi.js';
 
 export class Game {
   private static readonly PARAMS_STORAGE_KEY = 'supplyline:params';
+  private static readonly ACTIVE_FPS = 60;
+  private static readonly IDLE_FPS = 30;
+  private static readonly IDLE_TIMEOUT_MS = 3000;
 
   private app: Application;
   private isPaused: boolean = false;
+  private lastActivityTime = performance.now();
   private map: GameMap | null = null;
   private mapRenderer: MapRenderer | null = null;
   private debugOverlay: DebugOverlay | null = null;
@@ -43,8 +47,10 @@ export class Game {
     this.keyboardController = new KeyboardController(this.app);
     this.keyboardController.attach();
 
+    this.app.ticker.maxFPS = Game.ACTIVE_FPS;
     this.app.ticker.add(this.update.bind(this));
     this.setupControls();
+    this.setupIdleDetection();
 
     console.log('Supply Line initialized — map rendered');
   }
@@ -103,6 +109,8 @@ export class Game {
   }
 
   private update(_ticker: { deltaTime: number }): void {
+    this.updateIdleThrottle();
+
     if (this.mapRenderer) {
       this.keyboardController?.update(this.mapRenderer.cameraRef);
     }
@@ -110,6 +118,36 @@ export class Game {
 
     if (this.isPaused) return;
     // Future: game simulation updates go here
+  }
+
+  // --- Idle throttle ---
+
+  private setupIdleDetection(): void {
+    const canvas = this.app.canvas;
+    canvas.addEventListener('pointermove', this.resetActivity);
+    canvas.addEventListener('pointerdown', this.resetActivity);
+    canvas.addEventListener('wheel', this.resetActivity);
+    window.addEventListener('keydown', this.resetActivity);
+  }
+
+  private teardownIdleDetection(): void {
+    const canvas = this.app.canvas;
+    canvas.removeEventListener('pointermove', this.resetActivity);
+    canvas.removeEventListener('pointerdown', this.resetActivity);
+    canvas.removeEventListener('wheel', this.resetActivity);
+    window.removeEventListener('keydown', this.resetActivity);
+  }
+
+  private resetActivity = (): void => {
+    this.lastActivityTime = performance.now();
+  };
+
+  private updateIdleThrottle(): void {
+    const idle = performance.now() - this.lastActivityTime > Game.IDLE_TIMEOUT_MS;
+    const targetFps = idle ? Game.IDLE_FPS : Game.ACTIVE_FPS;
+    if (this.app.ticker.maxFPS !== targetFps) {
+      this.app.ticker.maxFPS = targetFps;
+    }
   }
 
   private updateDebugOverlay(): void {
@@ -143,6 +181,7 @@ export class Game {
   }
 
   destroy(): void {
+    this.teardownIdleDetection();
     this.mapRenderer?.destroy();
     this.mapRenderer = null;
     this.map = null;
