@@ -28,6 +28,8 @@ export default mergeConfig(
           'src/ui/DebugOverlay.ts',
           'src/ui/KeyboardController.ts',
           'src/ui/Camera.ts',
+          'src/bible/main.ts',
+          'src/bible/components/**',
         ],
         thresholds: {
           lines: 70,
