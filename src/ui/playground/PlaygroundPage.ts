@@ -14,6 +14,7 @@ import { BuildController } from './BuildController';
 import { BuildToolbar } from './BuildToolbar';
 import { PlaygroundFacilityLayer } from './PlaygroundFacilityLayer';
 import { PlaygroundSupplyLineLayer } from './PlaygroundSupplyLineLayer';
+import { ShipmentLayer } from './ShipmentLayer';
 import type { TimeSpeed } from './TimeControls';
 import { TimeControls } from './TimeControls';
 
@@ -30,6 +31,7 @@ export class PlaygroundPage {
   private selectionLayer!: SelectionLayer;
   private facilityLayer!: PlaygroundFacilityLayer;
   private supplyLineLayer!: PlaygroundSupplyLineLayer;
+  private shipmentLayer!: ShipmentLayer;
   private boundOnFrame!: () => void;
   private toolbar!: BuildToolbar;
   private _currentTool: BuildTool = 'select';
@@ -88,9 +90,13 @@ export class PlaygroundPage {
     this.terrainLayer = new TerrainLayer(this.gameMap);
     this.worldContainer.addChild(this.terrainLayer.container);
 
-    // Supply line layer (below facilities)
+    // Supply line layer (below shipments and facilities)
     this.supplyLineLayer = new PlaygroundSupplyLineLayer();
     this.worldContainer.addChild(this.supplyLineLayer.container);
+
+    // Shipment layer (animated particles between facilities)
+    this.shipmentLayer = new ShipmentLayer();
+    this.worldContainer.addChild(this.shipmentLayer.container);
 
     // Facility layer
     this.facilityLayer = new PlaygroundFacilityLayer();
@@ -189,6 +195,7 @@ export class PlaygroundPage {
     const simState = this._simulation.state;
     this.facilityLayer.build(simState);
     this.supplyLineLayer.build(simState);
+    this.shipmentLayer.update(simState.shipments);
 
     this.timeControls?.updateTick(this._simulation.state.tick);
   }
@@ -204,6 +211,7 @@ export class PlaygroundPage {
     this.selectionLayer.destroy();
     this.facilityLayer.destroy();
     this.supplyLineLayer.destroy();
+    this.shipmentLayer.destroy();
     this.app.stage.removeChild(this.worldContainer);
     this.worldContainer.destroy();
   }
