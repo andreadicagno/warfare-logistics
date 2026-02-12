@@ -36,7 +36,6 @@ interface FlowParticle {
   splineIndex: number;
   totalLength: number;
   speed: number;
-  routeType: 'road' | 'railway';
 }
 
 function estimateSplineLength(segments: BezierSegment[]): number {
@@ -70,7 +69,6 @@ function pickCount(range: [number, number]): number {
 function createFlowParticles(
   splines: BezierSegment[][],
   healths: Map<number, RouteHealth>,
-  routeType: 'road' | 'railway',
 ): FlowParticle[] {
   const particles: FlowParticle[] = [];
 
@@ -97,7 +95,6 @@ function createFlowParticles(
             splineIndex: i,
             totalLength,
             speed,
-            routeType,
           });
           spawned++;
         }
@@ -111,7 +108,6 @@ function createFlowParticles(
           splineIndex: i,
           totalLength,
           speed,
-          routeType,
         });
       }
     }
@@ -124,8 +120,7 @@ export class FlowLayer {
   readonly container = new Container();
   private graphics = new Graphics();
   private particles: FlowParticle[] = [];
-  private roadSplines: BezierSegment[][] = [];
-  private railwaySplines: BezierSegment[][] = [];
+  private splines: BezierSegment[][] = [];
   private getZoom: () => number;
 
   constructor(getZoom: () => number) {
@@ -134,17 +129,11 @@ export class FlowLayer {
   }
 
   init(
-    roadSplines: BezierSegment[][],
-    railwaySplines: BezierSegment[][],
-    roadHealths: Map<number, RouteHealth>,
-    railwayHealths: Map<number, RouteHealth>,
+    splines: BezierSegment[][],
+    healths: Map<number, RouteHealth>,
   ): void {
-    this.roadSplines = roadSplines;
-    this.railwaySplines = railwaySplines;
-    this.particles = [
-      ...createFlowParticles(roadSplines, roadHealths, 'road'),
-      ...createFlowParticles(railwaySplines, railwayHealths, 'railway'),
-    ];
+    this.splines = splines;
+    this.particles = createFlowParticles(splines, healths);
   }
 
   update(ticker: Ticker): void {
@@ -167,8 +156,7 @@ export class FlowLayer {
     this.graphics.clear();
 
     for (const p of this.particles) {
-      const splines = p.routeType === 'road' ? this.roadSplines : this.railwaySplines;
-      const segs = splines[p.splineIndex];
+      const segs = this.splines[p.splineIndex];
       if (!segs || segs.length === 0) continue;
 
       const pos = evaluateSplineAt(segs, p.t);
