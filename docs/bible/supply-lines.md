@@ -16,10 +16,19 @@ Status: `[DESIGN COMPLETE]`
 
 ## Construction
 
-- **Hex-by-hex**: the player traces a path on the map. Each hex crossed costs CP/hex of the chosen level. An 8-hex line at lv2 = 8 × 15 = 120 CP
+- **Hex-by-hex**: the player selects a start hex and an end hex. The supply line auto-routes between them along passable terrain. Each hex crossed costs CP/hex of the chosen level. An 8-hex line at lv2 = 8 × 15 = 120 CP
 - **Branching network**: forks and intersections are free. Nodes where branches meet distribute flow automatically
 - **Terrain cost**: River hex costs **2x CP** (bridge required). Hills hex costs **1.5x CP**
 - **Placement**: passable hexes only (not Water, not Mountain)
+
+## Facility Connection
+
+Facilities **auto-connect** to supply lines. When a factory or depot is placed on or adjacent to a hex that belongs to a supply line, it automatically taps into the network. No manual wiring needed — proximity is the connection.
+
+- A factory adjacent to a supply line pushes its output buffer into the network
+- A depot adjacent to a supply line pulls resources from the network based on demand
+- One supply line can serve multiple facilities along its path
+- A facility can connect to multiple supply lines if they pass nearby
 
 ## Transit Time
 

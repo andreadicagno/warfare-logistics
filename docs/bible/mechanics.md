@@ -23,13 +23,27 @@ Status: `[DESIGN COMPLETE]`
 
 ## Supply Flow
 
-Resources flow from production to consumption as physical particles:
+Resources flow through a **demand-driven** network. Depots pull resources; factories buffer production until demand exists.
 
-1. **Production** — Factory produces resource particles each tick
-2. **Transit** — Particles travel through supply lines at the line's speed (hex/hr)
-3. **Storage** — Particles arrive at depot, stock increments
-4. **Distribution** — Depot distributes to units in range (distance decay + throughput cap)
-5. **Consumption** — Units consume resources based on type and state
+### Flow Model
+
+1. **Production** — Factory produces resources each tick and stores them in its **internal depot** (output buffer). If the buffer is full, production pauses.
+2. **Demand broadcast** — A depot that isn't full broadcasts demand ("I need X fuel, Y ammo...") across the supply line network it's connected to.
+3. **Network resolution** — The system finds the shortest path through the supply line network from a source (factory internal depot or another depot with surplus) to the demanding depot. Resources are dispatched as shipments.
+4. **Transit** — Shipments travel as physical particles through supply lines at the line's speed (hex/hr). In-transit resources are real — they exist inside the pipeline.
+5. **Arrival** — When a shipment reaches the demanding depot, it's added to the depot's storage.
+6. **Distribution** — Depot distributes to units in range (distance decay + throughput cap).
+7. **Consumption** — Units consume resources based on type and state.
+
+### Connection Model
+
+Facilities **auto-connect** to adjacent supply lines. When a factory or depot is placed on or adjacent to a supply line hex, it taps into the network automatically. Supply lines are infrastructure — facilities are the taps.
+
+### Demand Priority
+
+- Closest source serves first (shortest path through the network)
+- When multiple depots demand from the same factory, resources split proportionally to available capacity
+- A depot with surplus can redistribute to another depot's demand (depot-to-depot chaining)
 
 Status: `[DESIGN COMPLETE]`
 

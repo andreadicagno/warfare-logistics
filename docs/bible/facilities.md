@@ -1,12 +1,37 @@
 # Facilities
 
-Facilities are the nodes of the supply network. 2 types: **Factory** (produces resources) and **Depot** (stores and distributes). Both upgradable to 5 levels.
+Facilities are the nodes of the supply network. 5 types: **Fuel Factory**, **Ammo Factory**, **Food Factory**, **Parts Factory** (each produces one resource), and **Depot** (stores and distributes). All upgradable to 5 levels.
 
-## Factory
+## Factories
+
+There are 4 distinct factory types — one per resource. Each is a separate buildable facility with its own icon and color identity. Production is direct — no inputs required.
+
+### Factory Types
 
 <!-- component: facility-preview type=factory -->
 
-Produces a single resource type. 4 subtypes: Fuel Factory, Ammo Factory, Food Factory, Construction Parts Factory. Production is direct — no inputs required.
+| Factory | Resource | Color | Icon |
+|---------|----------|-------|------|
+| Fuel Factory | Fuel | `0xccaa22` (gold) | Fuel drop |
+| Ammo Factory | Ammo | `0x666666` (grey) | Shell |
+| Food Factory | Food | `0x44aa44` (green) | Wheat |
+| Parts Factory | Construction Parts | `0xcc8833` (orange) | Gear |
+
+### Internal Depot (Output Buffer)
+
+Every factory has a small **internal depot** that holds produced resources until the network demands them. The factory produces each tick and fills this buffer. When a depot on the network broadcasts demand, resources are dispatched from the buffer as shipments. If the buffer is full and no demand exists, production pauses.
+
+| Level | Buffer Capacity |
+|-------|----------------|
+| 1 | 20 |
+| 2 | 50 |
+| 3 | 100 |
+| 4 | 170 |
+| 5 | 260 |
+
+Buffer capacity scales with production — roughly 2 days' worth of output at each level.
+
+### Production & Upgrade Table
 
 **Economies of scale**: higher levels are more CP-efficient per unit of production, but concentrate risk (single point of failure if bombed).
 
@@ -18,10 +43,13 @@ Produces a single resource type. 4 subtypes: Fuel Factory, Ammo Factory, Food Fa
 | 4 | 85 | 35 | 110 | 1.29 | 6 days |
 | 5 | 130 | 40 | 150 | 1.15 | 8 days |
 
+All 4 factory types share the same production/upgrade table. The only difference is the resource they produce.
+
+### Properties
+
 | Property | Value |
 |----------|-------|
-| Icon | Gear (circle + spokes) |
-| Placement | Urban hex or adjacent to Urban hex |
+| Placement | Any passable hex (not Water, not Mountain) |
 | Upgrade | Factory **stopped** during upgrade (no production) |
 | Damage | Reduces throughput by a percentage. Repair costs CP + time proportional to damage |
 

@@ -12,7 +12,7 @@ A logistics strategy game set in World War 2 where the player manages the supply
 ## Categories
 
 - **Resources** — Fuel, Ammo, Food, Construction Parts
-- **Facilities** — Factory (4 subtypes) and Depot, both 5 levels
+- **Facilities** — 4 Factory types (Fuel, Ammo, Food, Parts) and Depot, all 5 levels
 - **Supply Lines** — 5 levels, built hex-by-hex, branching network
 - **Units** — Infantry, Armor, Artillery with NATO symbols and supply status
 - **Factions** — Allied (player) and Enemy (AI) territories

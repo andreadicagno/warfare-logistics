@@ -50,10 +50,15 @@ Construction Parts do not flow to depots or units. They go directly to construct
 
 ## Flow System
 
-Resources flow automatically through the supply network as **physical particles**:
-- Produced at a Factory → enter supply line as a particle
-- Travel hex-by-hex at the supply line's speed
-- Arrive at a Depot → depot stock increments
-- Depot distributes to units in range based on distance decay
+Resources flow through a **demand-driven** network:
+
+1. Factory produces → resources accumulate in the factory's **internal depot** (output buffer)
+2. Depot broadcasts demand → "I need X of this resource"
+3. Network resolves → shortest path from source (factory buffer or surplus depot) to demanding depot
+4. Shipment dispatched → visible particle travels hex-by-hex at supply line speed
+5. Arrival → depot stock increments
+6. Distribution → depot delivers to units in range based on distance decay
+
+If no demand exists, the factory's buffer fills up and production pauses. Resources only move when something needs them.
 
 Status: `[DESIGN COMPLETE]`
